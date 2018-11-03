@@ -1,0 +1,2 @@
+string topic
+AudioFormat[] allowedFormats
