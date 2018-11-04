@@ -22,13 +22,14 @@ find_package(catkin REQUIRED
 set (CMAKE_CXX_FLAGS "-O2")
 
 
-## Generate messages in the 'msg' folder
+## Generate messages in the 'msgs' folder
 add_message_files(
         DIRECTORY esiaf_ros/msgs
         FILES
         NodeInfo.msg
         AudioTopicInfo.msg
         AudioFormat.msg
+        AugmentedAudio.msg
 )
 
 generate_messages(

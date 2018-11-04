@@ -6,31 +6,26 @@
 #define ESIAF_NODESTRUCTURES_H
 
 #include <string>
+#include <vector>
+#include "../include/esiaf_ros.h"
 
-namespace esiaf{
+namespace esiaf_ros{
     namespace nodestructures{
 
-        struct AudioFormat{
-            int rate;
-            int bitrate;
-            std::string endian;
-        };
-
-        struct AudioInfoTopic{
-            std::string topic;
-            AudioFormat allowedFormats[];
-        };
 
         class EsiafNode{
         public:
-            explicit EsiafNode();
+            explicit EsiafNode(std::string name);
 
-        private:
-
+            std::string name;
+            std::vector<EsiafAudioTopicInfo> inputTopics;
+            std::vector<EsiafAudioTopicInfo> outputTopics;
         };
 
 
-    }
-}
+
+
+    }// namespace
+}// namespace
 
 #endif //ESIAF_NODESTRUCTURES_H
