@@ -5,10 +5,13 @@
 #ifndef ESIAF_TREEGENERATION_H
 #define ESIAF_TREEGENERATION_H
 
-namespace esiaf_ros{
-    namespace treegeneration{
+#include <vector>
+#include "../include/nodestructures.h"
 
-        void create_audio_tree();
+namespace esiaf_ros {
+    namespace treegeneration {
+
+        void create_audio_tree(std::vector<nodestructures::EsiafNode> &nodes);
     }
 }
 

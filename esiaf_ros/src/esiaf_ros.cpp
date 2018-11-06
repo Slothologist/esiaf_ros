@@ -13,7 +13,7 @@
 #include <string>
 #include <unistd.h>
 
-namespace esiaf_ros{
+namespace esiaf_ros {
 
     // library specific parameters
     std::string esiaf_topic = "/esiaf/node_info_topic";
@@ -24,7 +24,7 @@ namespace esiaf_ros{
     nodestructures::EsiafNode own_representation(0);
 
     // ros publisher and subscriber
-    ros::NodeHandle* ros_node_handle;
+    ros::NodeHandle *ros_node_handle;
     ros::Publisher publisher;
     ros::Subscriber subscriber;
 
@@ -32,44 +32,42 @@ namespace esiaf_ros{
     bool started = false;
 
 
-    void publish_own_info(){
+    void publish_own_info() {
         esiaf_ros::NodeInfo nodeinfo;
 
         nodeinfo.name = own_representation.name;
 
         // converting input topics
-        std::vector<EsiafAudioTopicInfo>::iterator it;
-        for(it = own_representation.inputTopics.begin(); it != own_representation.inputTopics.end(); it++)    {
+        for (auto esaifInputAudioTopicInfo : own_representation.inputTopics) { // auto = EsiafAudioTopicInfo
             esiaf_ros::AudioTopicInfo topicinfo;
 
-            topicinfo.topic = it->topic;
-            std::vector<EsiafAudioFormat>::iterator it2;
-            for(it2 = it->allowedFormats.begin(); it2 != it->allowedFormats.end(); it2++) {
+            topicinfo.topic = esaifInputAudioTopicInfo.topic;
+            for (auto esiafAllowedAudioFormat : esaifInputAudioTopicInfo.allowedFormats) { // auto = EsiafAudioFormat
                 esiaf_ros::AudioFormat format;
 
-                format.bitrate = it2->bitrate;
-                format.channels = it2->channels;
-                format.rate = it2->rate;
-                format.endian = it2->endian;
+                format.bitrate = esiafAllowedAudioFormat.bitrate;
+                format.channels = esiafAllowedAudioFormat.channels;
+                format.rate = esiafAllowedAudioFormat.rate;
+                format.endian = esiafAllowedAudioFormat.endian;
 
                 topicinfo.allowedFormats.push_back(format);
             }
 
             nodeinfo.inputTopics.push_back(topicinfo);
         }
+
         // basically the same for output topics
-        for(it = own_representation.outputTopics.begin(); it != own_representation.outputTopics.end(); it++)    {
+        for (auto esaifOutputAudioTopicInfo : own_representation.outputTopics) { // auto = EsiafAudioTopicInfo
             esiaf_ros::AudioTopicInfo topicinfo;
 
-            topicinfo.topic = it->topic;
-            std::vector<EsiafAudioFormat>::iterator it2;
-            for(it2 = it->allowedFormats.begin(); it2 != it->allowedFormats.end(); it2++) {
+            topicinfo.topic = esaifOutputAudioTopicInfo.topic;
+            for (auto esiafAllowedAudioFormat : esaifOutputAudioTopicInfo.allowedFormats) { // auto = EsiafAudioFormat
                 esiaf_ros::AudioFormat format;
 
-                format.bitrate = it2->bitrate;
-                format.channels = it2->channels;
-                format.rate = it2->rate;
-                format.endian = it2->endian;
+                format.bitrate = esiafAllowedAudioFormat.bitrate;
+                format.channels = esiafAllowedAudioFormat.channels;
+                format.rate = esiafAllowedAudioFormat.rate;
+                format.endian = esiafAllowedAudioFormat.endian;
 
                 topicinfo.allowedFormats.push_back(format);
             }
@@ -81,23 +79,21 @@ namespace esiaf_ros{
         publisher.publish(nodeinfo);
     }
 
-    nodestructures::EsiafNode create_EsiafNode_from_msg(esiaf_ros::NodeInfo &nodeInfo){
+    nodestructures::EsiafNode create_EsiafNode_from_msg(esiaf_ros::NodeInfo &nodeInfo) {
         nodestructures::EsiafNode node(nodeInfo.name);
 
         // converting input topics
-        std::vector<esiaf_ros::AudioTopicInfo>::iterator it;
-        for(it = nodeInfo.inputTopics.begin(); it != nodeInfo.inputTopics.end(); it++)    {
+        for (auto audioInputTopicInfo : nodeInfo.inputTopics) { // auto = AudioTopicInfo
             EsiafAudioTopicInfo topicinfo;
 
-            topicinfo.topic = it->topic;
-            std::vector<AudioFormat>::iterator it2;
-            for(it2 = it->allowedFormats.begin(); it2 != it->allowedFormats.end(); it2++) {
+            topicinfo.topic = audioInputTopicInfo.topic;
+            for (auto allowedAudioFormat : audioInputTopicInfo.allowedFormats) { // auto = AudioFormat
                 EsiafAudioFormat format;
 
-                format.bitrate = it2->bitrate;
-                format.channels = it2->channels;
-                format.rate = it2->rate;
-                format.endian = it2->endian;
+                format.bitrate = allowedAudioFormat.bitrate;
+                format.channels = allowedAudioFormat.channels;
+                format.rate = allowedAudioFormat.rate;
+                format.endian = allowedAudioFormat.endian;
 
                 topicinfo.allowedFormats.push_back(format);
             }
@@ -105,18 +101,17 @@ namespace esiaf_ros{
             node.inputTopics.push_back(topicinfo);
         }
         // basically the same for output topics
-        for(it = nodeInfo.outputTopics.begin(); it != nodeInfo.outputTopics.end(); it++)    {
+        for (auto audioOutputTopicInfo : nodeInfo.outputTopics) { // auto = AudioTopicInfo
             EsiafAudioTopicInfo topicinfo;
 
-            topicinfo.topic = it->topic;
-            std::vector<AudioFormat>::iterator it2;
-            for(it2 = it->allowedFormats.begin(); it2 != it->allowedFormats.end(); it2++) {
+            topicinfo.topic = audioOutputTopicInfo.topic;
+            for (auto allowedAudioFormat : audioOutputTopicInfo.allowedFormats) { // auto = AudioFormat
                 EsiafAudioFormat format;
 
-                format.bitrate = it2->bitrate;
-                format.channels = it2->channels;
-                format.rate = it2->rate;
-                format.endian = it2->endian;
+                format.bitrate = allowedAudioFormat.bitrate;
+                format.channels = allowedAudioFormat.channels;
+                format.rate = allowedAudioFormat.rate;
+                format.endian = allowedAudioFormat.endian;
 
                 topicinfo.allowedFormats.push_back(format);
             }
@@ -127,35 +122,36 @@ namespace esiaf_ros{
         return node;
     }
 
-    void subscriber_callback(esiaf_ros::NodeInfo msg){
+    void subscriber_callback(esiaf_ros::NodeInfo msg) {
 
         bool node_known = false;
 
         // iterate through known nodes
         std::vector<nodestructures::EsiafNode>::iterator it;
-        for(it = nodes.begin(); it != nodes.end(); it++)    {
-            if(it->name == msg.name) {
+        for (it = nodes.begin(); it != nodes.end(); it++) {
+            if (it->name == msg.name) {
                 node_known = true;
-                if(!msg.alive){ // node shuts down, remove node from internal node vector
+                if (!msg.alive) { // node shuts down, remove node from internal node vector
                     nodes.erase(it);
+                    it--; // decrease iterator to cope with edited vector
                     // may need to rebuild the audio tree, if only the lib was
                     break;
-                } else{
+                } else {
                     // node is already known, no need to do anything
                     break;
                 }
             }
         }
         // if the node sending the message wasn't known, add it to the internal node vector and send our own
-        if(! node_known){
+        if (!node_known) {
             nodes.push_back(create_EsiafNode_from_msg(msg));
-            if(started) {
+            if (started) {
                 publish_own_info();
             }
         }
     }
 
-    void initialize_esiaf(ros::NodeHandle* nodeHandle){
+    void initialize_esiaf(ros::NodeHandle *nodeHandle) {
         // initialize basic stuff
         ros_node_handle = nodeHandle;
         own_representation = nodestructures::EsiafNode(ros::this_node::getName());
@@ -165,17 +161,17 @@ namespace esiaf_ros{
     }
 
     // TODO: add callback function
-    void add_input_topic(EsiafAudioTopicInfo &input){
+    void add_input_topic(EsiafAudioTopicInfo &input) {
         own_representation.inputTopics.push_back(input);
     }
 
     // TODO: add function to call to output audio?
-    void add_output_topic(EsiafAudioTopicInfo &output){
+    void add_output_topic(EsiafAudioTopicInfo &output) {
         own_representation.outputTopics.push_back(output);
     }
 
 
-    void start_esiaf(){
+    void start_esiaf() {
         // make yourself known to other esiaf nodes
         started = true;
         publish_own_info();
@@ -184,7 +180,7 @@ namespace esiaf_ros{
         usleep(1000 * 500); // 500 milliseconds
 
         // create an audio tree
-        esiaf_ros::treegeneration::create_audio_tree();
+        esiaf_ros::treegeneration::create_audio_tree(nodes);
     }
 
 }// namespace
