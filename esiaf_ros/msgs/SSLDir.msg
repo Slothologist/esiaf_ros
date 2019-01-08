@@ -1,0 +1,3 @@
+string sourceId
+float32 angleVertical
+float32 angleHorizontal

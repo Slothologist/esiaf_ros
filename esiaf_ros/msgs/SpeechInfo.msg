@@ -1,0 +1,2 @@
+RecordingTimeStamps duration
+SpeechHypothesis[] hypotheses

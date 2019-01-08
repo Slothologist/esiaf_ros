@@ -1,0 +1,2 @@
+DeterminedTopicConfig[] inputTopics
+DeterminedTopicConfig[] outputTopics

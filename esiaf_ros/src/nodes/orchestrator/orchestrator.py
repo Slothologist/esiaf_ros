@@ -1,0 +1,133 @@
+# ros imports
+import rosnode
+import rospy
+
+# esiaf imports
+from node import Node
+from esiaf_ros.msg import *
+
+
+# threading imports
+import threading
+import time
+import signal
+import sys
+
+# imports for mocks
+from AudioInfo import AudioFormat
+
+
+class Orchestrator:
+    """
+    Class representing a esiaf_ros orchestrator. It will handle orchestration between the esiaf_ros nodes.
+    This includes registering of nodes, determining their audio in- and output formats and the points in the audio flow
+    where resampling is necessary.
+    """
+
+    active_nodes = []
+    active_nodes_lock = threading.Lock()
+    stopping_signal = False
+
+    registerSubscriber = None
+
+    def __init__(self,
+                 remove_dead_rate=0.2
+                 ):
+        """
+        Will initialise an orchestrator according to the config file found under the given path.
+        :param path_to_config: may be relative or absolute
+        """
+        self.registerSubscriber = rospy.Subscriber("/esiaf_ros/orchestrator/register", esiaf_ros.msg.RegisterNode, self.register_node)
+
+        # define loop function for removing dead nodes and start a thread calling it every X seconds
+        def dead_loop(orc_instance, stop):
+            while not stop():
+                Orchestrator.remove_dead_nodes(orc_instance)
+                time.sleep(1/remove_dead_rate)
+            sys.exit(0)
+        t = threading.Thread(target=dead_loop, args=(self, lambda: self.stopping_signal))
+        t.start()
+
+        # create a signal handler so that sigint does not take forever to escalate and eventually kill the orchestrator
+        def signal_handler(sig, frame):
+            rospy.loginfo('Got SIGINT, shutting down!')
+            self.stopping_signal = True
+            t.join()
+            sys.exit(0)
+        signal.signal(signal.SIGINT, signal_handler)
+
+    def remove_dead_nodes(self):
+        """
+        This function will remove nodes from the orchestrators active_nodes list which have shut down.
+        Should be invoked in a regular interval.
+        :return: None
+        """
+        momentary_nodenames = rosnode.get_node_names()
+
+        with self.active_nodes_lock:
+            still_active_nodes = [x for x in self.active_nodes if x.name in momentary_nodenames]
+            dead_nodes = [x for x in self.active_nodes if x.name not in momentary_nodenames]
+
+            if dead_nodes:
+                rospy.logdebug('One or more esiaf nodes shut down!')
+                for dead in dead_nodes:
+                    dead.bury()
+                self.active_nodes = still_active_nodes
+                self.calculate_audio_tree()
+
+    def register_node(self, nodeinfo):
+        """
+        The callback function for the Orchestrators register subscription. Will register a node with this Orchestrator.
+        :param nodeinfo: the ros message containing the registering node's information
+        :return: 
+        """
+        new_node = Node(nodeinfo)
+        rospy.logdebug('Registering new node: ' + str(nodeinfo))
+
+        with self.active_nodes_lock:
+            self.active_nodes.append(new_node)
+            self.calculate_audio_tree()
+
+
+    def calculate_audio_tree(self):
+        """
+        Creates a new, optimized audio flow tree based on node preferences.
+        The node's determined audio formats will be stored directly in them, no special tree datastructure is constructed.
+        Assumes to already have the active_nodes_lock.
+        :return: None
+        """
+        self.calculate_audio_tree_naive()
+
+
+    def check_for_new_data(self):
+        """
+        Checks whether a new message can be send out to outside-of-pipeline subscribers
+        :return: True if a new message can be send out, false otherwise
+        """
+        return self.check_for_new_data_naive()
+
+
+    ####################################################################################
+    ###
+    ### temporary stuff for testing etc
+    ###
+    ####################################################################################
+
+    def check_for_new_data_naive(self):
+        """
+        naive method for mocking checks whether all
+        :return:
+        """
+        with self.active_nodes_lock:
+            return all([x.subMsgSubscriber.last_msgs for x in self.active_nodes])
+
+    def calculate_audio_tree_naive(self):
+        basic_format = AudioFormat(8,8,1,'LE')
+
+        for node in self.active_nodes:
+            for intopic in node.allowedTopicsIn:
+                node.actualTopicsIn.append((intopic.topic, basic_format))
+            for outtopic in node.allowedTopicsOut:
+                node.actualTopicsOut.append((outtopic.topic, basic_format))
+
+            node.update_config()

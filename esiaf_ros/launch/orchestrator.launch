@@ -1,0 +1,4 @@
+<launch>
+<arg name="path_to_config" />
+<node name="orchestrator" pkg="esiaf_ros" type="start_orchestrator.py" output="screen" args="$(arg path_to_config)" />
+</launch>

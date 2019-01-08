@@ -9,9 +9,11 @@ add_definitions(-std=c++11)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED
         roscpp
+        rospy
+        rosnode
         message_generation
         std_msgs
-        )
+)
 
 
 ## System dependencies are found with CMake's conventions
@@ -20,6 +22,11 @@ find_package(catkin REQUIRED
 
 ## Set compiler flags
 set (CMAKE_CXX_FLAGS "-O2")
+
+## Uncomment this if the package has a setup.py. This macro ensures
+## modules and global scripts declared therein get installed
+## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
+catkin_python_setup()
 
 
 ## Generate messages in the 'msgs' folder
@@ -30,6 +37,18 @@ add_message_files(
         AudioTopicInfo.msg
         AudioFormat.msg
         AugmentedAudio.msg
+        RegisterNode.msg
+        ChangedConfig.msg
+        DeterminedTopicConfig.msg
+        RecordingTimeStamps.msg
+        SpeechInfo.msg
+        SpeechHypothesis.msg
+        EmotionInfo.msg
+        GenderInfo.msg
+        SSLDir.msg
+        SSLInfo.msg
+        VoiceIdInfo.msg
+        VADInfo.msg
 )
 
 generate_messages(
@@ -37,11 +56,6 @@ generate_messages(
         std_msgs  # Or other packages containing msgs
 )
 
-
-## Uncomment this if the package has a setup.py. This macro ensures
-## modules and global scripts declared therein get installed
-## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
-# catkin_python_setup()
 
 ################################################
 ## Declare ROS messages, services and actions ##
@@ -143,6 +157,7 @@ add_dependencies(esiaf_ros ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED
 ## Specify libraries to link a library or executable target against
 target_link_libraries(esiaf_ros
         ${catkin_LIBRARIES}
+        soxr
         )
 target_link_libraries(esiaf_play
         ${catkin_LIBRARIES}
@@ -175,16 +190,19 @@ install(TARGETS esiaf_ros
         )
 
 ## Mark cpp header files for installation
-# install(DIRECTORY include/${PROJECT_NAME}/
-#   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-#   FILES_MATCHING PATTERN "*.h"
-#   PATTERN ".svn" EXCLUDE
-# )
+install(DIRECTORY include/${PROJECT_NAME}/
+   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+   FILES_MATCHING PATTERN "esiaf_ros.h"
+   PATTERN ".svn" EXCLUDE
+ )
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
 install(DIRECTORY launch
         DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
         )
+
+CATKIN_INSTALL_PYTHON(PROGRAMS ${CMAKE_CURRENT_SOURCE_DIR}/esiaf_ros/scripts/start_orchestrator.py DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
 
 #############
 ## Testing ##
