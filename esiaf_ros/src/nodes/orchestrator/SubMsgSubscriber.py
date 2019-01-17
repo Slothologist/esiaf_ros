@@ -24,7 +24,8 @@ class SubMsgSubscriber:
     def __init__(self,
                  name,
                  designation):
-        self.subscriber = rospy.Subscriber(name + '/' + SubMsgSubscriber.DESIGNATION_DICT[designation][0],
+        if 0 < designation < 7:
+            self.subscriber = rospy.Subscriber(name + '/' + SubMsgSubscriber.DESIGNATION_DICT[designation][0],
                                            SubMsgSubscriber.DESIGNATION_DICT[designation][1],
                                            self.callback)
 

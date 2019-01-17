@@ -16,8 +16,8 @@ class Bitrate(Enum):
 
 class Endian(Enum):
     """Enum that defines the available endian types"""
-    LE = 'LE'
-    BE = 'BE'
+    LE = 1
+    BE = 10
 
 
 class AudioRate(Enum):
@@ -66,17 +66,19 @@ class AudioFormat:
 
 class AudioTopicInfo:
     topic = None
-    allowedFormats = None
+    allowedFormat = None
 
     def __init__(self,
                  audioTopicInfo):
         self.topic = audioTopicInfo.topic
-        self.allowedFormats = [AudioFormat(audioFormat.rate,
-                                           audioFormat.bitrate,
-                                           audioFormat.channels,
-                                           audioFormat.endian)
-                               for audioFormat in audioTopicInfo.allowedFormats]
+        self.allowedFormat = AudioFormat(audioTopicInfo.allowedFormat.rate,
+                                           audioTopicInfo.allowedFormat.bitrate,
+                                           audioTopicInfo.allowedFormat.channels,
+                                           audioTopicInfo.allowedFormat.endian)
 
     def to_ros(self):
-        return None
+        rosified = esiaf_msg.AudioTopicInfo()
+        rosified.topic = self.topic
+        rosified.allowedFormat = self.allowedFormat.to_ros()
+        return rosified
 

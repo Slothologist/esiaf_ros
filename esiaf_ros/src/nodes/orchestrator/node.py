@@ -26,7 +26,7 @@ class Node:
     def __init__(self, nodeinfo):
         self.name = nodeinfo.name
         self.designation = nodeinfo.designation
-        self.configPublisher = rospy.Publisher(self.name + '/esiaf_ros/changedConfig', ChangedConfig, queue_size=10)
+        self.configPublisher = rospy.Publisher('/esiaf_ros/' + self.name + '/changedConfig', ChangedConfig, queue_size=10)
 
         self.allowedTopicsIn = []
         self.allowedTopicsOut = []

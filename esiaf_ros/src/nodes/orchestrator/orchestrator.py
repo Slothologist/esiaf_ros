@@ -122,7 +122,7 @@ class Orchestrator:
             return all([x.subMsgSubscriber.last_msgs for x in self.active_nodes])
 
     def calculate_audio_tree_naive(self):
-        basic_format = AudioFormat(8,8,1,'LE')
+        basic_format = AudioFormat(8, 8, 1, 1)
 
         for node in self.active_nodes:
             for intopic in node.allowedTopicsIn:

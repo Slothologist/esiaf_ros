@@ -1,2 +1,2 @@
 string topic
-AudioFormat[] allowedFormats
+AudioFormat allowedFormat
