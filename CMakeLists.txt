@@ -33,22 +33,23 @@ catkin_python_setup()
 add_message_files(
         DIRECTORY esiaf_ros/msgs
         FILES
-        NodeInfo.msg
-        AudioTopicInfo.msg
         AudioFormat.msg
+        AudioTopicInfo.msg
         AugmentedAudio.msg
-        RegisterNode.msg
         ChangedConfig.msg
         DeterminedTopicConfig.msg
-        RecordingTimeStamps.msg
-        SpeechInfo.msg
-        SpeechHypothesis.msg
         EmotionInfo.msg
+        EsiafRosMsg.msg
         GenderInfo.msg
+        NodeInfo.msg
+        RecordingTimeStamps.msg
+        RegisterNode.msg
+        SpeechHypothesis.msg
+        SpeechInfo.msg
         SSLDir.msg
         SSLInfo.msg
-        VoiceIdInfo.msg
         VADInfo.msg
+        VoiceIdInfo.msg
 )
 
 generate_messages(
@@ -145,6 +146,7 @@ add_library(esiaf_ros
         )
 
 ## Declare C++ executables
+add_executable(esiaf_grabber esiaf_ros/src/nodes/grabber.cpp)
 add_executable(esiaf_record esiaf_ros/src/nodes/record.cpp)
 add_executable(esiaf_play esiaf_ros/src/nodes/play.cpp)
 
@@ -158,6 +160,10 @@ add_dependencies(esiaf_ros ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED
 target_link_libraries(esiaf_ros
         ${catkin_LIBRARIES}
         soxr
+        )
+target_link_libraries(esiaf_grabber
+        ${catkin_LIBRARIES}
+        esiaf_ros
         )
 target_link_libraries(esiaf_play
         ${catkin_LIBRARIES}
@@ -184,6 +190,7 @@ target_link_libraries(esiaf_record
 
 ## Mark executables and/or libraries for installation
 install(TARGETS esiaf_ros
+        esiaf_grabber
         esiaf_play
         esiaf_record
         DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
