@@ -84,7 +84,8 @@ class Orchestrator:
                 for dead in dead_nodes:
                     dead.bury()
                 for crashed in crashed_nodes:
-                    still_active_nodes.remove(crashed)
+                    if crashed in still_active_nodes:
+                        still_active_nodes.remove(crashed)
                 self.active_nodes = still_active_nodes
                 self.calculate_audio_tree()
 
