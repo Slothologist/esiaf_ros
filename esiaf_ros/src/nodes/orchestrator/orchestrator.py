@@ -5,7 +5,7 @@ import rospy
 # esiaf imports
 from node import Node
 from esiaf_ros.msg import *
-
+from esiaf_ros.srv import *
 
 # threading imports
 import threading
@@ -28,7 +28,7 @@ class Orchestrator:
     active_nodes_lock = threading.Lock()
     stopping_signal = False
 
-    registerSubscriber = None
+    registerService = None
 
     def __init__(self,
                  remove_dead_rate=0.2
@@ -37,14 +37,15 @@ class Orchestrator:
         Will initialise an orchestrator according to the config file found under the given path.
         :param path_to_config: may be relative or absolute
         """
-        self.registerSubscriber = rospy.Subscriber("/esiaf_ros/orchestrator/register", esiaf_ros.msg.RegisterNode, self.register_node)
+        self.registerService = rospy.Service('/esiaf_ros/orchestrator/register', RegisterNode, self.register_node)
 
         # define loop function for removing dead nodes and start a thread calling it every X seconds
         def dead_loop(orc_instance, stop):
             while not stop():
                 Orchestrator.remove_dead_nodes(orc_instance)
-                time.sleep(1/remove_dead_rate)
+                time.sleep(1 / remove_dead_rate)
             sys.exit(0)
+
         t = threading.Thread(target=dead_loop, args=(self, lambda: self.stopping_signal))
         t.start()
 
@@ -54,6 +55,7 @@ class Orchestrator:
             self.stopping_signal = True
             t.join()
             sys.exit(0)
+
         signal.signal(signal.SIGINT, signal_handler)
 
     def remove_dead_nodes(self):
@@ -65,13 +67,24 @@ class Orchestrator:
         momentary_nodenames = rosnode.get_node_names()
 
         with self.active_nodes_lock:
-            still_active_nodes = [x for x in self.active_nodes if x.name in momentary_nodenames]
-            dead_nodes = [x for x in self.active_nodes if x.name not in momentary_nodenames]
+            def check_node_ping(name):
+                try:
+                    return rosnode.rosnode_ping(name, 1)
+                except:
+                    return False
+
+
+            still_active_nodes = [x for x in self.active_nodes if
+                                  x.name in momentary_nodenames]
+            dead_nodes = [x for x in self.active_nodes if x.name not in momentary_nodenames or not check_node_ping(x.name)]
+            crashed_nodes = [x for x in self.active_nodes if not check_node_ping(x.name)]
 
             if dead_nodes:
                 rospy.logdebug('One or more esiaf nodes shut down!')
                 for dead in dead_nodes:
                     dead.bury()
+                for crashed in crashed_nodes:
+                    still_active_nodes.remove(crashed)
                 self.active_nodes = still_active_nodes
                 self.calculate_audio_tree()
 
@@ -82,12 +95,13 @@ class Orchestrator:
         :return: 
         """
         new_node = Node(nodeinfo)
-        rospy.logdebug('Registering new node: ' + str(nodeinfo))
+        rospy.loginfo('Registering new node: ' + str(nodeinfo))
 
         with self.active_nodes_lock:
             self.active_nodes.append(new_node)
             self.calculate_audio_tree()
 
+        return RegisterNodeResponse()
 
     def calculate_audio_tree(self):
         """
@@ -98,14 +112,12 @@ class Orchestrator:
         """
         self.calculate_audio_tree_naive()
 
-
     def check_for_new_data(self):
         """
         Checks whether a new message can be send out to outside-of-pipeline subscribers
         :return: True if a new message can be send out, false otherwise
         """
         return self.check_for_new_data_naive()
-
 
     ####################################################################################
     ###

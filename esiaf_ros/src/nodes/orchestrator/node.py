@@ -3,7 +3,7 @@ import rospy
 
 # audio info imports
 from AudioInfo import *
-from esiaf_ros.msg import ChangedConfig, DeterminedTopicConfig
+from esiaf_ros.msg import ChangedConfig
 from SubMsgSubscriber import SubMsgSubscriber
 
 
@@ -26,7 +26,7 @@ class Node:
     def __init__(self, nodeinfo):
         self.name = nodeinfo.name
         self.designation = nodeinfo.designation
-        self.configPublisher = rospy.Publisher('/esiaf_ros/' + self.name + '/changedConfig', ChangedConfig, queue_size=10)
+        self.configPublisher = rospy.Publisher('/esiaf_ros' + self.name + '/changedConfig', ChangedConfig, queue_size=10)
 
         self.allowedTopicsIn = []
         self.allowedTopicsOut = []
@@ -52,16 +52,16 @@ class Node:
 
         config.inputTopics = []
         for topic in self.actualTopicsIn:
-            determinedConfig = DeterminedTopicConfig()
+            determinedConfig = esiaf_msg.AudioTopicInfo()
             determinedConfig.topic = topic[0]
-            determinedConfig.determinedFormat = topic[1].to_ros()
+            determinedConfig.allowedFormat = topic[1].to_ros()
             config.inputTopics.append(determinedConfig)
 
         config.outputTopics = []
         for topic in self.actualTopicsOut:
-            determinedConfig = DeterminedTopicConfig()
+            determinedConfig = esiaf_msg.AudioTopicInfo()
             determinedConfig.topic = topic[0]
-            determinedConfig.determinedFormat = topic[1].to_ros()
+            determinedConfig.allowedFormat = topic[1].to_ros()
             config.outputTopics.append(determinedConfig)
 
         self.configPublisher.publish(config)
@@ -73,5 +73,6 @@ class Node:
         :return:
         """
         self.configPublisher.unregister()
-        self.subMsgSubscriber.subscriber.unregister()
+        rospy.loginfo('Node %s has vanished. Removing it from pipeline!' % self.name)
+        # self.subMsgSubscriber.subscriber.unregister()
         del self

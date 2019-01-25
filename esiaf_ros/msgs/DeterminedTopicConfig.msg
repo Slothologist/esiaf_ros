@@ -1,2 +1,0 @@
-string topic
-AudioFormat determinedFormat

@@ -15,6 +15,7 @@ find_package(catkin REQUIRED
         std_msgs
 )
 
+find_package(ALSA)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -37,13 +38,11 @@ add_message_files(
         AudioTopicInfo.msg
         AugmentedAudio.msg
         ChangedConfig.msg
-        DeterminedTopicConfig.msg
         EmotionInfo.msg
         EsiafRosMsg.msg
         GenderInfo.msg
         NodeInfo.msg
         RecordingTimeStamps.msg
-        RegisterNode.msg
         SpeechHypothesis.msg
         SpeechInfo.msg
         SSLDir.msg
@@ -51,6 +50,14 @@ add_message_files(
         VADInfo.msg
         VoiceIdInfo.msg
 )
+
+## Generate services in the 'srvs' folder
+ADD_SERVICE_FILES(
+        DIRECTORY esiaf_ros/srvs
+        FILES
+        RegisterNode.srv
+)
+
 
 generate_messages(
         DEPENDENCIES
@@ -156,23 +163,33 @@ add_executable(esiaf_play esiaf_ros/src/nodes/play.cpp)
 add_dependencies(esiaf_ros ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 
-## Specify libraries to link a library or executable target against
+## Specify libraries to link a library against
 target_link_libraries(esiaf_ros
         ${catkin_LIBRARIES}
         soxr
         )
+
+## Specify libraries to link executables against
 target_link_libraries(esiaf_grabber
         ${catkin_LIBRARIES}
+        asound
         esiaf_ros
         )
 target_link_libraries(esiaf_play
         ${catkin_LIBRARIES}
+        asound
         esiaf_ros
         )
 target_link_libraries(esiaf_record
         ${catkin_LIBRARIES}
+        asound
         esiaf_ros
         )
+
+## Specify include directories for the executables, so esiaf_ros.h can be found
+target_include_directories(esiaf_grabber PUBLIC esiaf_ros/include/)
+target_include_directories(esiaf_play PUBLIC esiaf_ros/include/)
+target_include_directories(esiaf_record PUBLIC esiaf_ros/include/)
 
 #############
 ## Install ##
@@ -197,7 +214,7 @@ install(TARGETS esiaf_ros
         )
 
 ## Mark cpp header files for installation
-install(DIRECTORY include/${PROJECT_NAME}/
+install(DIRECTORY include/
    DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
    FILES_MATCHING PATTERN "esiaf_ros.h"
    PATTERN ".svn" EXCLUDE
