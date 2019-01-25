@@ -2,7 +2,8 @@
 // Created by rfeldhans on 09.01.19.
 //
 #include "../include/topicData.h"
-#include <assert.h>
+
+#include "esiaf_ros/RecordingTimeStamps.h"
 
 namespace esiaf_ros{
     namespace topicdata{
@@ -15,6 +16,50 @@ namespace esiaf_ros{
             return topic.topic;
         }
 
+        esiaf_ros::EsiafAudioTopicInfo TopicData::getInfo(){
+            return topic;
+        }
+
+
+        void TopicData::setActualFormat(esiaf_ros::AudioFormat actualFormat){
+            this->actualFormat = actualFormat;
+            determine_resampling_necessary();
+        }
+
+
+        void TopicData::determine_resampling_necessary() {
+            resampling_necessary = topic.allowedFormat.rate == esiaf_ros::Rate(actualFormat.rate)
+                    && topic.allowedFormat.bitrate == esiaf_ros::Bitrate(actualFormat.bitrate)
+                    && topic.allowedFormat.endian == esiaf_ros::Endian(actualFormat.endian)
+                    && topic.allowedFormat.channels == actualFormat.channels;
+        }
+
+        /////////////////////////////////////////////////////////////////////////////////////
+        // INPUT SUBCLASS
+        /////////////////////////////////////////////////////////////////////////////////////
+
+        InputTopicData::InputTopicData(ros::NodeHandle* nodeHandle,
+                                       esiaf_ros::EsiafAudioTopicInfo topic,
+                                       const std::function<void(std::vector<int8_t>,
+                                                                esiaf_ros::RecordingTimeStamps)>& callback_ptr) {
+            this->topic = topic;
+            userCallback = callback_ptr;
+            subscriber = nodeHandle->subscribe<esiaf_ros::AugmentedAudio>(topic.topic, 1000, boost::bind(&InputTopicData::internal_subscriber_callback, this, _1));
+        }
+
+        void InputTopicData::internal_subscriber_callback(const esiaf_ros::AugmentedAudio::ConstPtr& msg){
+            ROS_INFO("internal_sub_callback start");
+            esiaf_ros::RecordingTimeStamps time = msg->time;
+            std::vector<int8_t> signal = msg->signal;
+            // ignore channel for now
+            if(resampling_necessary){
+                //todo
+            }
+            ROS_INFO("internal_sub_callback user callback next");
+            userCallback(signal, time);
+            ROS_INFO("internal_sub_callback user callback finished");
+        }
+
         /////////////////////////////////////////////////////////////////////////////////////
         // OUTPUT SUBCLASS
         /////////////////////////////////////////////////////////////////////////////////////
@@ -24,21 +69,16 @@ namespace esiaf_ros{
             publisher = nodeHandle->advertise<esiaf_ros::AugmentedAudio>(topic.topic, 1000);
         }
 
-        void OutputTopicData::publish(char *signalBuffer, size_t buffersize, esiaf_ros::RecordingTimeStamps) {
+        void OutputTopicData::publish(std::vector<int8_t> signal, esiaf_ros::RecordingTimeStamps) {
 
-        }
-
-        /////////////////////////////////////////////////////////////////////////////////////
-        //INPUT SUBCLASS
-        /////////////////////////////////////////////////////////////////////////////////////
-
-        InputTopicData::InputTopicData(ros::NodeHandle* nodeHandle, esiaf_ros::EsiafAudioTopicInfo topic, std::function<void(char*, size_t, esiaf_ros::RecordingTimeStamps)> callback_ptr) {
-            this->topic = topic;
-            subscriber = nodeHandle->subscribe<esiaf_ros::AugmentedAudio>(topic.topic, 1000, boost::bind(&InputTopicData::internal_subscriber_callback, this, _1));
-        }
-
-        void InputTopicData::internal_subscriber_callback(const esiaf_ros::AugmentedAudio::ConstPtr& msg){
-
+            if(resampling_necessary){
+                //todo
+            }
+            esiaf_ros::AugmentedAudio msg;
+            msg.signal = signal;
+            //std::vector<char> vec = std::vector(signalBuffer);
+            // ignore channel for now
+            publisher.publish(msg);
         }
     }
 }

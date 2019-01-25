@@ -1,2 +1,2 @@
-DeterminedTopicConfig[] inputTopics
-DeterminedTopicConfig[] outputTopics
+AudioTopicInfo[] inputTopics
+AudioTopicInfo[] outputTopics

@@ -15,6 +15,10 @@
 #include "esiaf_ros/RecordingTimeStamps.h"
 
 namespace esiaf_ros {
+
+    /**
+     * An enum to determine what kind of node a specific node is.
+     */
     enum class NodeDesignation{
         VAD = 1,
         SpeechRec = 2,
@@ -25,6 +29,9 @@ namespace esiaf_ros {
         Other = 7
     };
 
+    /**
+     * This enum is used to determine a audio rate a specific AudioFormat uses.
+     */
     enum class Rate{
         RATE_8000 = 8,
         RATE_16000 = 16,
@@ -34,6 +41,9 @@ namespace esiaf_ros {
         RATE_96000 = 96
     };
 
+    /**
+     * This enum is used to determine an AudioFormats bitrate.
+     */
     enum class Bitrate{
         BIT_8 = 8,
         BIT_16 = 16,
@@ -41,11 +51,18 @@ namespace esiaf_ros {
         BIT_32 = 32
     };
 
+    /**
+     * This enum is used to determine an AudioFormats endian.
+     */
     enum class Endian{
         LittleEndian = 1,
         BigEndian = 10
     };
 
+    /**
+     * This struct is used to store an audio format. It is comprised of a rate and bitrate, the amount of channels and
+     * the endian of the audio. Each of these values (apart from the amount of channels) is determined by another enum.
+     */
     struct EsiafAudioFormat {
         Rate rate;
         Bitrate bitrate;
@@ -53,20 +70,48 @@ namespace esiaf_ros {
         Endian endian;
     };
 
+    /**
+     * Struct to store information about a esiaf_ros audio topic. Consists of a topic name and a format.
+     */
     struct EsiafAudioTopicInfo {
         std::string topic;
         EsiafAudioFormat allowedFormat;
     };
 
+    /**
+     *
+     * @param nodeHandle
+     * @param nodeDesignation
+     */
     void initialize_esiaf(ros::NodeHandle *nodeHandle, NodeDesignation nodeDesignation);
 
-    void add_input_topic(EsiafAudioTopicInfo &input, std::function<void(char*, size_t, esiaf_ros::RecordingTimeStamps)>);
+    /**
+     *
+     * @param input
+     * @param callback
+     */
+    void add_input_topic(EsiafAudioTopicInfo &input,
+                         const std::function<void(std::vector<int8_t>, esiaf_ros::RecordingTimeStamps)>& callback);
 
+    /**
+     *
+     * @param output
+     */
     void add_output_topic(EsiafAudioTopicInfo &output);
 
+    /**
+     *
+     */
     void start_esiaf();
 
-    void publish(std::string topic, char *signalBuffer, size_t buffersize, esiaf_ros::RecordingTimeStamps timeStamps);
+    /**
+     *
+     * @param topic
+     * @param signalBuffer
+     * @param buffersize
+     * @param timeStamps
+     */
+    void publish(std::string topic, std::vector<int8_t> signal, esiaf_ros::RecordingTimeStamps timeStamps);
 
 }// namespace
 

@@ -1,0 +1,3 @@
+<launch>
+<node name="grabber" pkg="esiaf_ros" type="esiaf_grabber" output="screen" args="default" />
+</launch>

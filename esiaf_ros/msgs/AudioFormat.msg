@@ -1,4 +1,4 @@
-int8 rate
-int8 bitrate
-int8 channels
-string endian
+int32 rate
+int32 bitrate
+int32 channels
+int32 endian
