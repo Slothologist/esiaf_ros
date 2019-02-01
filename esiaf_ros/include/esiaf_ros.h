@@ -17,6 +17,11 @@
 namespace esiaf_ros {
 
     /**
+     * A struct for the esiaf handle. Used primarily to make all methods stateless and reentrant.
+     */
+    struct esiaf_handle;
+
+    /**
      * An enum to determine what kind of node a specific node is.
      */
     enum class NodeDesignation{
@@ -82,36 +87,49 @@ namespace esiaf_ros {
      *
      * @param nodeHandle
      * @param nodeDesignation
+     * @return
      */
-    void initialize_esiaf(ros::NodeHandle *nodeHandle, NodeDesignation nodeDesignation);
+    esiaf_handle* initialize_esiaf(ros::NodeHandle *nodeHandle,
+                          NodeDesignation nodeDesignation);
 
     /**
      *
+     * @param esiafHandle
      * @param input
      * @param callback
      */
-    void add_input_topic(EsiafAudioTopicInfo &input,
-                         const std::function<void(std::vector<int8_t>, esiaf_ros::RecordingTimeStamps)>& callback);
+    void add_input_topic(esiaf_handle* esiafHandle,
+                         EsiafAudioTopicInfo &input,
+                         boost::function<void(
+                                 const std::vector<int8_t>&,
+                                 const esiaf_ros::RecordingTimeStamps&)>
+                         callback);
 
     /**
      *
+     * @param esiafHandle
      * @param output
      */
-    void add_output_topic(EsiafAudioTopicInfo &output);
+    void add_output_topic(esiaf_handle* esiafHandle,
+                          EsiafAudioTopicInfo &output);
 
     /**
      *
+     * @param esiafHandle
      */
-    void start_esiaf();
+    void start_esiaf(esiaf_handle* esiafHandle);
 
     /**
      *
+     * @param esiafHandle
      * @param topic
-     * @param signalBuffer
-     * @param buffersize
+     * @param signal
      * @param timeStamps
      */
-    void publish(std::string topic, std::vector<int8_t> signal, esiaf_ros::RecordingTimeStamps timeStamps);
+    void publish(esiaf_handle* esiafHandle,
+                 std::string topic,
+                 std::vector<int8_t> signal,
+                 esiaf_ros::RecordingTimeStamps timeStamps);
 
 }// namespace
 

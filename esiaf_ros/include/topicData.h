@@ -29,10 +29,10 @@ namespace esiaf_ros{
             esiaf_ros::EsiafAudioTopicInfo topic;
 
             bool resampling_necessary = false;
+            esiaf_ros::AudioFormat actualFormat;
 
         private:
             void determine_resampling_necessary();
-            esiaf_ros::AudioFormat actualFormat;
 
         };
 
@@ -45,12 +45,13 @@ namespace esiaf_ros{
         public:
             InputTopicData(ros::NodeHandle* nodeHandle,
                            esiaf_ros::EsiafAudioTopicInfo topic,
-                           const std::function<void(std::vector<int8_t>, esiaf_ros::RecordingTimeStamps)>& callback_ptr);
+                           boost::function<void(const std::vector<int8_t>&,
+                                              const esiaf_ros::RecordingTimeStamps&)> callback_ptr);
 
         private:
             ros::Subscriber subscriber;
 
-            std::function<void(std::vector<int8_t>, esiaf_ros::RecordingTimeStamps)> userCallback;
+            boost::function<void(const std::vector<int8_t>&, const esiaf_ros::RecordingTimeStamps&)> userCallback;
 
             void internal_subscriber_callback(const esiaf_ros::AugmentedAudio::ConstPtr& msg);
         };
@@ -65,7 +66,7 @@ namespace esiaf_ros{
         public:
             OutputTopicData(ros::NodeHandle* nodeHandle, esiaf_ros::EsiafAudioTopicInfo topic);
 
-            void publish(std::vector<int8_t> signal, esiaf_ros::RecordingTimeStamps);
+            void publish(std::vector<int8_t> signal, esiaf_ros::RecordingTimeStamps timeStamps);
 
         private:
             ros::Publisher publisher;
