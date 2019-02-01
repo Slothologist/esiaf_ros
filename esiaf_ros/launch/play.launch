@@ -1,0 +1,3 @@
+<launch>
+<node name="player" pkg="esiaf_ros" type="esiaf_play" output="screen" args="pulse" />
+</launch>
