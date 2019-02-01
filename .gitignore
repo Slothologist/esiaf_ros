@@ -1,3 +1,6 @@
+# pyc files
+*.pyc
+
 # build & debug
 cmake-build-debug/
 
