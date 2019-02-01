@@ -19,10 +19,12 @@ int main(int argc, char **argv) {
     // alsa initialisation
     int i;
     int err;
-    int buffersize = 128;
-    int8_t buf[buffersize];
+    int buffersize = 10240;
+    int16_t buf[buffersize];
     snd_pcm_t *capture_handle;
     snd_pcm_hw_params_t *hw_params;
+
+    ROS_INFO("preparing audio device...");
 
     if ((err = snd_pcm_open (&capture_handle, argv[1], SND_PCM_STREAM_CAPTURE, 0)) < 0) {
         fprintf (stderr, "cannot open audio device %s (%s)\n",
@@ -86,8 +88,11 @@ int main(int argc, char **argv) {
     // esiaf start
     //////////////////////////////////////////////////////
 
+    ROS_INFO("starting esiaf initialisation...");
+
     // initialise esiaf
-    esiaf_ros::initialize_esiaf(&n, esiaf_ros::NodeDesignation::Other);
+    esiaf_ros::esiaf_handle* eh = esiaf_ros::initialize_esiaf(&n, esiaf_ros::NodeDesignation::Other);
+    ROS_INFO("creating esiaf output topic...");
 
     //create format for output topic
     esiaf_ros::EsiafAudioTopicInfo topicInfo;
@@ -102,23 +107,28 @@ int main(int argc, char **argv) {
     topicInfo.topic = topicname;
 
     // notify esiaf about the output topic
-    esiaf_ros::add_output_topic(topicInfo);
+    ROS_INFO("adding esiaf output topic...");
+    esiaf_ros::add_output_topic(eh, topicInfo);
 
     // start esiaf
-    esiaf_ros::start_esiaf();
+    ROS_INFO("starting esiaf...");
+    esiaf_ros::start_esiaf(eh);
 
     //////////////////////////////////////////////////////
     // esiaf initialisation finished
     //////////////////////////////////////////////////////
 
+    ROS_INFO("Node ready!");
+
+    snd_pcm_prepare(capture_handle);
     // grab audio
     while (ros::ok()) {
         ros::Time begin = ros::Time::now();
         if ((err = snd_pcm_readi (capture_handle, buf, buffersize)) != buffersize) {
             fprintf (stderr, "read from audio interface failed (%s)\n",
                      snd_strerror (err));
-            exit (1);
-        } else{
+            //exit (1);
+        } else {
 
             // publish audio via esiaf
             ros::Time end = ros::Time::now();
@@ -126,9 +136,13 @@ int main(int argc, char **argv) {
             timeStamps.start = begin;
             timeStamps.finish = end;
 
-            std::vector<int8_t> msg_input(buf, buf + buffersize);
-            esiaf_ros::publish(topicname, msg_input, timeStamps);
+            int8_t* buf8 = reinterpret_cast<int8_t*>(buf);
+
+            std::vector<int8_t> msg_input(buf8, buf8 + 2*buffersize);
+            ROS_INFO("size= %d", msg_input.size());
+            esiaf_ros::publish(eh, topicname, msg_input, timeStamps);
         }
+        ros::spinOnce();
     }
 
     // close audio device
