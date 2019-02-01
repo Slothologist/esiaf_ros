@@ -13,7 +13,10 @@ find_package(catkin REQUIRED
         rosnode
         message_generation
         std_msgs
-)
+        )
+
+find_package(Boost REQUIRED
+        )
 
 find_package(ALSA)
 
