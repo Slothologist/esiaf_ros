@@ -2,15 +2,18 @@
 // Created by rfeldhans on 16.01.19.
 //
 
+#include <thread>
 #include "ros/ros.h"
 #include <esiaf_ros.h>
 #include "esiaf_ros/RecordingTimeStamps.h"
 #include <alsa/asoundlib.h>
+#include <mutex>
 
 int main(int argc, char **argv) {
 
     // some parameters for esiaf
     std::string topicname = "input";
+    std::mutex mutex;
 
     // ros initialisation
     ros::init(argc, argv, "esiaf_grabber");
@@ -26,62 +29,62 @@ int main(int argc, char **argv) {
 
     ROS_INFO("preparing audio device...");
 
-    if ((err = snd_pcm_open (&capture_handle, argv[1], SND_PCM_STREAM_CAPTURE, 0)) < 0) {
-        fprintf (stderr, "cannot open audio device %s (%s)\n",
-                 argv[1],
-                 snd_strerror (err));
-        exit (1);
+    if ((err = snd_pcm_open(&capture_handle, argv[1], SND_PCM_STREAM_CAPTURE, 0)) < 0) {
+        fprintf(stderr, "cannot open audio device %s (%s)\n",
+                argv[1],
+                snd_strerror(err));
+        exit(1);
     }
 
-    if ((err = snd_pcm_hw_params_malloc (&hw_params)) < 0) {
-        fprintf (stderr, "cannot allocate hardware parameter structure (%s)\n",
-                 snd_strerror (err));
-        exit (1);
+    if ((err = snd_pcm_hw_params_malloc(&hw_params)) < 0) {
+        fprintf(stderr, "cannot allocate hardware parameter structure (%s)\n",
+                snd_strerror(err));
+        exit(1);
     }
 
-    if ((err = snd_pcm_hw_params_any (capture_handle, hw_params)) < 0) {
-        fprintf (stderr, "cannot initialize hardware parameter structure (%s)\n",
-                 snd_strerror (err));
-        exit (1);
+    if ((err = snd_pcm_hw_params_any(capture_handle, hw_params)) < 0) {
+        fprintf(stderr, "cannot initialize hardware parameter structure (%s)\n",
+                snd_strerror(err));
+        exit(1);
     }
 
-    if ((err = snd_pcm_hw_params_set_access (capture_handle, hw_params, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0) {
-        fprintf (stderr, "cannot set access type (%s)\n",
-                 snd_strerror (err));
-        exit (1);
+    if ((err = snd_pcm_hw_params_set_access(capture_handle, hw_params, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0) {
+        fprintf(stderr, "cannot set access type (%s)\n",
+                snd_strerror(err));
+        exit(1);
     }
 
-    if ((err = snd_pcm_hw_params_set_format (capture_handle, hw_params, SND_PCM_FORMAT_S16_LE)) < 0) {
-        fprintf (stderr, "cannot set sample format (%s)\n",
-                 snd_strerror (err));
-        exit (1);
+    if ((err = snd_pcm_hw_params_set_format(capture_handle, hw_params, SND_PCM_FORMAT_S16_LE)) < 0) {
+        fprintf(stderr, "cannot set sample format (%s)\n",
+                snd_strerror(err));
+        exit(1);
     }
 
     unsigned int rate = 8000;
-    if ((err = snd_pcm_hw_params_set_rate_near (capture_handle, hw_params, &rate, 0)) < 0) {
-        fprintf (stderr, "cannot set sample rate (%s)\n",
-                 snd_strerror (err));
-        exit (1);
+    if ((err = snd_pcm_hw_params_set_rate_near(capture_handle, hw_params, &rate, 0)) < 0) {
+        fprintf(stderr, "cannot set sample rate (%s)\n",
+                snd_strerror(err));
+        exit(1);
     }
 
-    if ((err = snd_pcm_hw_params_set_channels (capture_handle, hw_params, 1)) < 0) {
-        fprintf (stderr, "cannot set channel count (%s)\n",
-                 snd_strerror (err));
-        exit (1);
+    if ((err = snd_pcm_hw_params_set_channels(capture_handle, hw_params, 1)) < 0) {
+        fprintf(stderr, "cannot set channel count (%s)\n",
+                snd_strerror(err));
+        exit(1);
     }
 
-    if ((err = snd_pcm_hw_params (capture_handle, hw_params)) < 0) {
-        fprintf (stderr, "cannot set parameters (%s)\n",
-                 snd_strerror (err));
-        exit (1);
+    if ((err = snd_pcm_hw_params(capture_handle, hw_params)) < 0) {
+        fprintf(stderr, "cannot set parameters (%s)\n",
+                snd_strerror(err));
+        exit(1);
     }
 
-    snd_pcm_hw_params_free (hw_params);
+    snd_pcm_hw_params_free(hw_params);
 
-    if ((err = snd_pcm_prepare (capture_handle)) < 0) {
-        fprintf (stderr, "cannot prepare audio interface for use (%s)\n",
-                 snd_strerror (err));
-        exit (1);
+    if ((err = snd_pcm_prepare(capture_handle)) < 0) {
+        fprintf(stderr, "cannot prepare audio interface for use (%s)\n",
+                snd_strerror(err));
+        exit(1);
     }
 
     //////////////////////////////////////////////////////
@@ -91,7 +94,7 @@ int main(int argc, char **argv) {
     ROS_INFO("starting esiaf initialisation...");
 
     // initialise esiaf
-    esiaf_ros::esiaf_handle* eh = esiaf_ros::initialize_esiaf(&n, esiaf_ros::NodeDesignation::Other);
+    esiaf_ros::esiaf_handle *eh = esiaf_ros::initialize_esiaf(&n, esiaf_ros::NodeDesignation::Other);
     ROS_INFO("creating esiaf output topic...");
 
     //create format for output topic
@@ -121,33 +124,56 @@ int main(int argc, char **argv) {
     ROS_INFO("Node ready!");
 
     snd_pcm_prepare(capture_handle);
-    // grab audio
-    while (ros::ok()) {
-        ros::Time begin = ros::Time::now();
-        if ((err = snd_pcm_readi (capture_handle, buf, buffersize)) != buffersize) {
-            fprintf (stderr, "read from audio interface failed (%s)\n",
-                     snd_strerror (err));
-            //exit (1);
-        } else {
 
-            // publish audio via esiaf
-            ros::Time end = ros::Time::now();
+    // grab audio
+    bool newAudio = false;
+    ros::Time begin = ros::Time::now(), end;
+
+
+    std::thread audioGrabberThread([&] {
+        while (true) {
+            int16_t buffer[buffersize];
+            if ((err = snd_pcm_readi(capture_handle, buffer, buffersize)) != buffersize) {
+                fprintf(stderr, "read from audio interface failed (%s)\n",
+                        snd_strerror(err));
+                //exit (1);
+            } else {
+                mutex.lock();
+                // memcopy buffer to buf
+                memcpy(buf, buffer, sizeof(buffer));
+                end = ros::Time::now();
+                newAudio = true;
+                mutex.unlock();
+
+            }
+        }
+    });
+
+    while (ros::ok()) {
+        mutex.lock();
+        if(newAudio){
+            // ros output
             esiaf_ros::RecordingTimeStamps timeStamps;
             timeStamps.start = begin;
             timeStamps.finish = end;
 
-            int8_t* buf8 = reinterpret_cast<int8_t*>(buf);
+            int8_t *buf8 = (int8_t*) buf;
+            std::vector<int8_t> msg_input(buf8, buf8 + 2 * buffersize);
 
-            std::vector<int8_t> msg_input(buf8, buf8 + 2*buffersize);
             ROS_INFO("size= %d", msg_input.size());
             esiaf_ros::publish(eh, topicname, msg_input, timeStamps);
+            begin = end;
+            newAudio = false;
         }
+        mutex.unlock();
+
         ros::spinOnce();
+
     }
 
     // close audio device
-    snd_pcm_close (capture_handle);
+    snd_pcm_close(capture_handle);
 
-    return(0);
+    return (0);
 }
 

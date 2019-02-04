@@ -19,6 +19,9 @@ boost::function<void(const std::vector<int8_t> &, const esiaf_ros::RecordingTime
 void esiaf_handler(const std::vector<int8_t> &signal, const esiaf_ros::RecordingTimeStamps & timeStamps){ simple_esiaf_callback(signal, timeStamps); };
 
 
+
+
+
 int main(int argc, char **argv) {
     ROS_INFO("MAIN CALLED");
 
@@ -126,22 +129,13 @@ int main(int argc, char **argv) {
         int err;
 
         const int8_t *buf8 = signal.data();
-        const int16_t *buf =  reinterpret_cast<const int16_t* >(buf8);
 
-        /*
-        if ((err = snd_pcm_writei(playback_handle, buf, signal.size()/2)) != signal.size()/2) {
-            ROS_INFO("signal size = %d", signal.size());
-            fprintf(stderr, "write to audio interface failed (%s)\n",
-                    snd_strerror(err));
-            //exit(1);
-        } else {
-            ROS_INFO("signal size = %d", signal.size());
-        }
-         */
+        int16_t *buf16[signal.size()/2];
+        mempcpy(buf16, buf8, sizeof(buf16));
 
         // Write data and play sound (blocking)
         mtx.lock();
-        snd_pcm_sframes_t frames = snd_pcm_writei(playback_handle, buf, signal.size()/2);
+        snd_pcm_sframes_t frames = snd_pcm_writei(playback_handle, buf16, signal.size()/2);
 
         ROS_INFO("frames %d", frames);
 
@@ -158,6 +152,7 @@ int main(int argc, char **argv) {
         mtx.unlock();
         ROS_INFO("Callback node end");
     };
+
     esiaf_ros::add_input_topic(eh, topicInfo, esiaf_handler);
 
     // start esiaf
