@@ -15,10 +15,27 @@ find_package(catkin REQUIRED
         std_msgs
         )
 
-find_package(Boost REQUIRED
-        )
+find_package(Boost REQUIRED)
 
-find_package(ALSA)
+find_package(ALSA REQUIRED)
+
+find_library(SOXR NAMES soxr)
+if (NOT SOXR)
+    message(FATAL_ERROR "soxr library not found")
+endif()
+
+## Non-essential libraries:
+# ros audio
+find_package(audio_common_msgs QUIET)
+find_package(audio_capture QUIET)
+find_package(audio_play QUIET)
+if (audio_common_msgs_FOUND AND audio_capture_FOUND AND audio_play_FOUND)
+    message("Build with ros audio support.")
+    set(ROS_AUDIO_SUPPORT 1)
+else()
+    message("audio common not found, build without ros audio support.")
+endif()
+
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
