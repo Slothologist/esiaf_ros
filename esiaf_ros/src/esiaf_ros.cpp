@@ -65,8 +65,6 @@ namespace esiaf_ros {
         esiafHandle->nodename = ros::this_node::getName();
         esiafHandle->nodedesignation = nodeDesignation;
 
-        ROS_INFO("esiaf_address, %d", esiafHandle);
-
 
         boost::function<void(const esiaf_ros::ChangedConfig&)> config_change_function = [&](const esiaf_ros::ChangedConfig& msg){
             handle_changed_config(esiafHandle, msg);

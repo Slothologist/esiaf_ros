@@ -48,21 +48,18 @@ namespace esiaf_ros{
         }
 
         void InputTopicData::internal_subscriber_callback(const esiaf_ros::AugmentedAudio::ConstPtr& msg){
-            ROS_INFO("internal_sub_callback start");
             esiaf_ros::RecordingTimeStamps time = msg->time;
             std::vector<int8_t> signal = msg->signal;
             // ignore channel for now
             if(resampling_necessary){
                 //todo
             }
-            ROS_INFO("internal_sub_callback user callback next");
             try {
                 userCallback(signal, time);
             }catch (const std::exception& e){
                 ROS_INFO("%s", e.what());
             }
 
-            ROS_INFO("internal_sub_callback user callback finished");
         }
 
         /////////////////////////////////////////////////////////////////////////////////////
