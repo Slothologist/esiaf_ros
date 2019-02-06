@@ -3,13 +3,78 @@
 //
 
 #include <csignal>
-#include <mutex>
 
 #include "ros/ros.h"
 #include <esiaf_ros.h>
+#include <thread>
 #include "esiaf_ros/RecordingTimeStamps.h"
-#include <alsa/asoundlib.h>
 #include "../../include/nodes/play.h"
+
+namespace nodes{
+
+    Player::Player(snd_pcm_t *playback_handle):
+    running(true),
+    playback_handle(playback_handle)
+    {
+        playThread = std::thread(&Player::playThreadMethod, this);
+    }
+
+    Player::~Player() {
+        if(running)
+            stop();
+    }
+
+    void Player::add_audio(int16_t* audio, size_t size) {
+        mutex.lock();
+
+        playlist.push(audio);
+        playsize.push(size);
+
+        mutex.unlock();
+    }
+
+    void Player::stop() {
+        running = false;
+        playThread.join();
+        snd_pcm_close(playback_handle); // takes forever, todo: investigate
+    }
+
+    void Player::playThreadMethod() {
+
+        while(running){
+            mutex.lock();
+
+            if(!playlist.empty()){
+
+                int16_t* buf = playlist.front();
+                size_t size = playsize.front();
+                playlist.pop();
+                playsize.pop();
+
+                mutex.unlock();
+
+                snd_pcm_sframes_t frames = snd_pcm_writei(playback_handle, buf, size);
+
+
+                // Check for errors
+                if (frames < 0)
+                    frames = snd_pcm_recover(playback_handle, frames, 0);
+                if (frames < 0) {
+                    fprintf(stderr, "ERROR: Failed writing audio with snd_pcm_writei(): %li\n", frames);
+                    exit(EXIT_FAILURE);
+                }
+                if (frames > 0 && frames < size)
+                    printf("Short write (expected %li, wrote %li)\n", size, frames);
+
+
+            }else{
+                mutex.unlock();
+            }
+        }
+    }
+}
+
+
 
 
 std::function<void(int)> shutdown_handler;
@@ -19,11 +84,7 @@ boost::function<void(const std::vector<int8_t> &, const esiaf_ros::RecordingTime
 void esiaf_handler(const std::vector<int8_t> &signal, const esiaf_ros::RecordingTimeStamps & timeStamps){ simple_esiaf_callback(signal, timeStamps); };
 
 
-
-
-
 int main(int argc, char **argv) {
-    ROS_INFO("MAIN CALLED");
 
     // some parameters for esiaf
     std::string topicname = "input";
@@ -96,7 +157,10 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
+    snd_pcm_prepare(playback_handle);
 
+    // add an audio player
+    nodes::Player player(playback_handle);
 
     //////////////////////////////////////////////////////
     // esiaf start
@@ -120,37 +184,18 @@ int main(int argc, char **argv) {
 
     // notify esiaf about the output topic
     ROS_INFO("adding input topic....");
-    std::mutex mtx;
 
-
+    // here we add a method to transfer incoming audio to the audio player
     simple_esiaf_callback = [&](const std::vector<int8_t> &signal,
                                 const esiaf_ros::RecordingTimeStamps &timeStamps){
-        ROS_INFO("Callback node start");
-        int err;
 
-        const int8_t *buf8 = signal.data();
+        const int8_t* buf8 = signal.data();
 
-        int16_t *buf16[signal.size()/2];
-        mempcpy(buf16, buf8, sizeof(buf16));
+        int16_t buf16[signal.size()/2];
+        mempcpy(buf16, buf8, signal.size() * sizeof(int8_t));
 
-        // Write data and play sound (blocking)
-        mtx.lock();
-        snd_pcm_sframes_t frames = snd_pcm_writei(playback_handle, buf16, signal.size()/2);
+        player.add_audio(buf16, signal.size()/2);
 
-        ROS_INFO("frames %d", frames);
-
-        // Check for errors
-        if (frames < 0)
-            //ROS_INFO("recover");
-            frames = snd_pcm_recover(playback_handle, frames, 0);
-        if (frames < 0) {
-            fprintf(stderr, "ERROR: Failed writing audio with snd_pcm_writei(): %li\n", frames);
-            exit(EXIT_FAILURE);
-        }
-        if (frames > 0 && frames < signal.size()/2)
-            printf("Short write (expected %d, wrote %li)\n", signal.size()/2, frames);
-        mtx.unlock();
-        ROS_INFO("Callback node end");
     };
 
     esiaf_ros::add_input_topic(eh, topicInfo, esiaf_handler);
@@ -167,13 +212,11 @@ int main(int argc, char **argv) {
     ROS_INFO("adding signal handler...");
     shutdown_handler = [&](int signal) {
         ROS_INFO("shutting down...");
-        snd_pcm_close(playback_handle);
+        player.stop();
         exit(signal);
     };
     signal(SIGINT, signal_handler);
 
-
-    snd_pcm_prepare(playback_handle);
     ROS_INFO("Node ready!");
 
     ros::spin();
