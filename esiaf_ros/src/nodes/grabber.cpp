@@ -7,13 +7,17 @@
 #include <esiaf_ros.h>
 #include "esiaf_ros/RecordingTimeStamps.h"
 #include <alsa/asoundlib.h>
-#include <mutex>
+
+std::function<void(std::vector<int8_t>, const ros::Time &, const ros::Time &)> publish_audio_func;
+
+void publish_audio(std::vector<int8_t> signal, const ros::Time &start_time, const ros::Time &end_time) {
+    publish_audio_func(signal, start_time, end_time);
+}
 
 int main(int argc, char **argv) {
 
     // some parameters for esiaf
     std::string topicname = "input";
-    std::mutex mutex;
 
     // ros initialisation
     ros::init(argc, argv, "esiaf_grabber");
@@ -22,10 +26,13 @@ int main(int argc, char **argv) {
     // alsa initialisation
     int i;
     int err;
-    int buffersize = 10240;
-    int16_t buf[buffersize];
+    int buffersize = 8000;
     snd_pcm_t *capture_handle;
     snd_pcm_hw_params_t *hw_params;
+
+    //////////////////////////////////////////////////////
+    // so much alsa stuff
+    //////////////////////////////////////////////////////
 
     ROS_INFO("preparing audio device...");
 
@@ -87,6 +94,8 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
+    snd_pcm_prepare(capture_handle);
+
     //////////////////////////////////////////////////////
     // esiaf start
     //////////////////////////////////////////////////////
@@ -121,55 +130,49 @@ int main(int argc, char **argv) {
     // esiaf initialisation finished
     //////////////////////////////////////////////////////
 
-    ROS_INFO("Node ready!");
 
-    snd_pcm_prepare(capture_handle);
 
-    // grab audio
-    bool newAudio = false;
+    //  we want the audio grabber to do just that, so here we create a function to publish our signal.
+    publish_audio_func = [&](std::vector<int8_t> signal, const ros::Time &start_time, const ros::Time &end_time) {
+
+        // create timestamps
+        esiaf_ros::RecordingTimeStamps timeStamps;
+        timeStamps.start = start_time;
+        timeStamps.finish = end_time;
+
+        // publish everything
+        esiaf_ros::publish(eh, topicname, signal, timeStamps);
+    };
+
+    // initialize timestamps for later publishing
     ros::Time begin = ros::Time::now(), end;
 
-
+    // here we create a dedicated thread to grab audio
     std::thread audioGrabberThread([&] {
         while (true) {
             int16_t buffer[buffersize];
             if ((err = snd_pcm_readi(capture_handle, buffer, buffersize)) != buffersize) {
-                fprintf(stderr, "read from audio interface failed (%s)\n",
-                        snd_strerror(err));
-                //exit (1);
+                ROS_ERROR("read from audio interface failed (%s)",
+                          snd_strerror(err));
             } else {
-                mutex.lock();
-                // memcopy buffer to buf
-                memcpy(buf, buffer, sizeof(buffer));
                 end = ros::Time::now();
-                newAudio = true;
-                mutex.unlock();
 
+                // pack buffer into std::vector
+                int8_t *buf8 = (int8_t *) buffer;
+                std::vector<int8_t> signal(buf8, buf8 + 2 * buffersize);
+
+                // create a new thread to publish the captured audio and let it do its thing (detach)
+                std::thread publishThread(publish_audio, signal, begin, end);
+                publishThread.detach();
+
+                // dont forget to switch begin to end timestamp
+                begin = end;
             }
         }
     });
 
-    while (ros::ok()) {
-        mutex.lock();
-        if(newAudio){
-            // ros output
-            esiaf_ros::RecordingTimeStamps timeStamps;
-            timeStamps.start = begin;
-            timeStamps.finish = end;
-
-            int8_t *buf8 = (int8_t*) buf;
-            std::vector<int8_t> msg_input(buf8, buf8 + 2 * buffersize);
-
-            ROS_INFO("size= %d", msg_input.size());
-            esiaf_ros::publish(eh, topicname, msg_input, timeStamps);
-            begin = end;
-            newAudio = false;
-        }
-        mutex.unlock();
-
-        ros::spinOnce();
-
-    }
+    ROS_INFO("Node ready!");
+    ros::spin();
 
     // close audio device
     snd_pcm_close(capture_handle);
