@@ -5,9 +5,9 @@
 // project includes
 #include "../include/esiaf_ros.h"
 #include "../include/topicData.h"
-#include "esiaf_ros/NodeInfo.h"
 
 // ros msg includes
+#include "esiaf_ros/NodeInfo.h"
 #include "esiaf_ros/RegisterNode.h"
 #include "esiaf_ros/ChangedConfig.h"
 #include "esiaf_ros/RecordingTimeStamps.h"

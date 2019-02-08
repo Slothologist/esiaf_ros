@@ -14,7 +14,7 @@ setup_args = generate_distutils_setup(
     install_requires=[
     ],
     packages=find_packages(),
-    package_dir={'orchestrator':'esiaf_ros/src/nodes/orchestrator'}
+    package_dir={'orchestrator': 'esiaf_ros/src/nodes/orchestrator'}
 )
 
 setup(**setup_args)

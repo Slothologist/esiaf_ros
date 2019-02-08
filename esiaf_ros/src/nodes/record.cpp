@@ -1,8 +1,106 @@
 //
 // Created by rfeldhans on 02.11.18.
 //
-#include "../../include/nodes/record.h"
+
+//signal handler and file writing
+#include <csignal>
+#include <fstream>
+
+// ros and esiaf imports
+#include "ros/ros.h"
+#include <esiaf_ros.h>
+#include "esiaf_ros/RecordingTimeStamps.h"
+#include "nodes/record.h"
+#include "nodes/utils.h"
+
+// boost config read imports
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ini_parser.hpp>
+
+std::function<void(int)> shutdown_handler;
+void signal_handler(int signal) { shutdown_handler(signal); }
+
+boost::function<void(const std::vector<int8_t> &, const esiaf_ros::RecordingTimeStamps &)> simple_esiaf_callback;
+void esiaf_handler(const std::vector<int8_t> &signal, const esiaf_ros::RecordingTimeStamps & timeStamps){ simple_esiaf_callback(signal, timeStamps); };
+
 
 int main(int argc, char **argv) {
-    return(0);
+
+    std::string config_file = argv[1];
+
+    boost::property_tree::ptree pt;
+    boost::property_tree::ini_parser::read_ini(config_file, pt);
+
+    // some parameters for esiaf
+    std::string topicname =  pt.get<std::string>("input_topic");
+
+    // ros initialisation
+    ros::init(argc, argv, pt.get<std::string>("node_name"));
+    ros::NodeHandle n;
+
+    // file initialization
+    std::string file_path = pt.get<std::string>("path_to_file");
+    esiaf_ros::utils::autoExpandEnvironmentVariables(file_path);
+    std::ofstream fout(file_path, std::ios::out | std::ios::binary);
+    if (!fout.is_open()){
+        ROS_WARN("File '%s' could not be written, exiting now!", file_path.c_str());
+        exit(0);
+    }
+
+    //////////////////////////////////////////////////////
+    // esiaf start
+    //////////////////////////////////////////////////////
+
+    // initialise esiaf
+    ROS_INFO("starting esiaf initialisation...");
+    esiaf_ros::esiaf_handle *eh = esiaf_ros::initialize_esiaf(&n, esiaf_ros::NodeDesignation::Other);
+
+    //create format for output topic
+    esiaf_ros::EsiafAudioTopicInfo topicInfo;
+
+    esiaf_ros::EsiafAudioFormat allowedFormat;
+    allowedFormat.rate = esiaf_ros::Rate::RATE_8000;
+    allowedFormat.channels = 1;
+    allowedFormat.bitrate = esiaf_ros::Bitrate::BIT_8;
+    allowedFormat.endian = esiaf_ros::Endian::LittleEndian;
+
+    topicInfo.allowedFormat = allowedFormat;
+    topicInfo.topic = topicname;
+
+    // notify esiaf about the output topic
+    ROS_INFO("adding input topic....");
+
+    // here we add a method to write audio data directly to the file
+    simple_esiaf_callback = [&](const std::vector<int8_t> &signal,
+                                const esiaf_ros::RecordingTimeStamps &timeStamps){
+
+        fout.write((const char*) signal.data(), signal.size() * sizeof(char));
+        fout.flush();
+    };
+
+    esiaf_ros::add_input_topic(eh, topicInfo, esiaf_handler);
+
+    // start esiaf
+    ROS_INFO("starting esiaf...");
+
+    esiaf_ros::start_esiaf(eh);
+
+    //////////////////////////////////////////////////////
+    // esiaf initialisation finished
+    //////////////////////////////////////////////////////
+
+    ROS_INFO("adding signal handler...");
+    shutdown_handler = [&](int signal) {
+        ROS_INFO("shutting down...");
+        fout.close();
+        exit(0);
+    };
+    signal(SIGINT, signal_handler);
+
+    ROS_INFO("Node ready!");
+
+    ros::spin();
+
+
+    return (0);
 }

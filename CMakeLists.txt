@@ -174,7 +174,7 @@ add_library(esiaf_ros
 
 ## Declare C++ executables
 add_executable(esiaf_grabber esiaf_ros/src/nodes/grabber.cpp)
-add_executable(esiaf_record esiaf_ros/src/nodes/record.cpp)
+add_executable(esiaf_record esiaf_ros/src/nodes/record.cpp esiaf_ros/src/nodes/utils.cpp)
 add_executable(esiaf_play esiaf_ros/src/nodes/play.cpp)
 
 
