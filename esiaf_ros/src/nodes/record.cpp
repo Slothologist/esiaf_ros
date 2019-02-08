@@ -10,7 +10,6 @@
 #include "ros/ros.h"
 #include <esiaf_ros.h>
 #include "esiaf_ros/RecordingTimeStamps.h"
-#include "nodes/record.h"
 #include "nodes/utils.h"
 
 // boost config read imports
