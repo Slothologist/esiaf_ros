@@ -59,10 +59,10 @@ int main(int argc, char **argv) {
     esiaf_ros::EsiafAudioTopicInfo topicInfo;
 
     esiaf_ros::EsiafAudioFormat allowedFormat;
-    allowedFormat.rate = esiaf_ros::Rate::RATE_8000;
+    allowedFormat.rate = esiaf_ros::utils::cfg_to_esaif_rate(pt.get<int>("sample_rate"));
     allowedFormat.channels = 1;
-    allowedFormat.bitrate = esiaf_ros::Bitrate::BIT_8;
-    allowedFormat.endian = esiaf_ros::Endian::LittleEndian;
+    allowedFormat.bitrate = esiaf_ros::utils::cfg_to_esiaf_bitrate(pt.get<int>("bitrate"));
+    allowedFormat.endian = esiaf_ros::utils::cfg_to_esiaf_endian(pt.get<std::string>("endian"));
 
     topicInfo.allowedFormat = allowedFormat;
     topicInfo.topic = topicname;
