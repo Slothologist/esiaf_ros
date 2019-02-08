@@ -25,8 +25,8 @@ void esiaf_handler(const std::vector<int8_t> &signal, const esiaf_ros::Recording
 
 int main(int argc, char **argv) {
 
+    // setting up config file and property tree
     std::string config_file = argv[1];
-
     boost::property_tree::ptree pt;
     boost::property_tree::ini_parser::read_ini(config_file, pt);
 

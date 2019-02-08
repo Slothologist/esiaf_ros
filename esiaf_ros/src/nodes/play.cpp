@@ -2,29 +2,34 @@
 // Created by rfeldhans on 02.11.18.
 //
 
+//signal handler and threading
 #include <csignal>
-
-#include "ros/ros.h"
-#include <esiaf_ros.h>
 #include <thread>
+
+// ros and esiaf imports
+#include "ros/ros.h"
 #include "esiaf_ros/RecordingTimeStamps.h"
-#include "../../include/nodes/play.h"
+#include "nodes/play.h"
+#include "nodes/utils.h"
 
-namespace nodes{
+// boost config read imports
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ini_parser.hpp>
 
-    Player::Player(snd_pcm_t *playback_handle):
-    running(true),
-    playback_handle(playback_handle)
-    {
+namespace nodes {
+
+    Player::Player(snd_pcm_t *playback_handle) :
+            running(true),
+            playback_handle(playback_handle) {
         playThread = std::thread(&Player::playThreadMethod, this);
     }
 
     Player::~Player() {
-        if(running)
+        if (running)
             stop();
     }
 
-    void Player::add_audio(int16_t* audio, size_t size) {
+    void Player::add_audio(int16_t *audio, size_t size) {
         mutex.lock();
 
         playlist.push(audio);
@@ -41,12 +46,12 @@ namespace nodes{
 
     void Player::playThreadMethod() {
 
-        while(running){
+        while (running) {
             mutex.lock();
 
-            if(!playlist.empty()){
+            if (!playlist.empty()) {
 
-                int16_t* buf = playlist.front();
+                int16_t *buf = playlist.front();
                 size_t size = playsize.front();
                 playlist.pop();
                 playsize.pop();
@@ -54,7 +59,7 @@ namespace nodes{
                 mutex.unlock();
 
                 snd_pcm_sframes_t frames = snd_pcm_writei(playback_handle, buf, size);
-
+                ROS_INFO("lala %d", frames);
 
                 // Check for errors
                 if (frames < 0)
@@ -67,41 +72,106 @@ namespace nodes{
                     printf("Short write (expected %li, wrote %li)\n", size, frames);
 
 
-            }else{
+            } else {
                 mutex.unlock();
             }
         }
     }
+
+
+    _snd_pcm_format set_up_format_from_bitrate_and_endian(esiaf_ros::Bitrate bitrate, esiaf_ros::Endian endian) {
+        switch (bitrate){
+            case esiaf_ros::Bitrate::BIT_8 :
+                return SND_PCM_FORMAT_S8;
+            case esiaf_ros::Bitrate::BIT_16 :
+                switch (endian){
+                    case esiaf_ros::Endian::LittleEndian:
+                        return SND_PCM_FORMAT_S16_LE;
+                    case esiaf_ros::Endian::BigEndian:
+                        return SND_PCM_FORMAT_S16_BE;
+                }
+            case esiaf_ros::Bitrate::BIT_24 :
+                switch (endian){
+                    case esiaf_ros::Endian::LittleEndian:
+                        return SND_PCM_FORMAT_S24_LE;
+                    case esiaf_ros::Endian::BigEndian:
+                        return SND_PCM_FORMAT_S24_BE;
+                }
+            case esiaf_ros::Bitrate::BIT_32 :
+                switch (endian){
+                    case esiaf_ros::Endian::LittleEndian:
+                        return SND_PCM_FORMAT_S32_LE;
+                    case esiaf_ros::Endian::BigEndian:
+                        return SND_PCM_FORMAT_S32_BE;
+                }
+        }
+    }
+
+    unsigned int set_up_sample_rate_from_esiaf(esiaf_ros::Rate sample_rate){
+        switch (sample_rate){
+            case esiaf_ros::Rate::RATE_8000:
+                return 8000;
+            case esiaf_ros::Rate::RATE_16000:
+                return 16000;
+            case esiaf_ros::Rate::RATE_32000:
+                return 32000;
+            case esiaf_ros::Rate::RATE_44100:
+                return 44100;
+            case esiaf_ros::Rate::RATE_48000:
+                return 48000;
+            case esiaf_ros::Rate::RATE_96000:
+                return 96000;
+        }
+    }
+
 }
 
 
-
-
 std::function<void(int)> shutdown_handler;
+
 void signal_handler(int signal) { shutdown_handler(signal); }
 
 boost::function<void(const std::vector<int8_t> &, const esiaf_ros::RecordingTimeStamps &)> simple_esiaf_callback;
-void esiaf_handler(const std::vector<int8_t> &signal, const esiaf_ros::RecordingTimeStamps & timeStamps){ simple_esiaf_callback(signal, timeStamps); };
+
+void esiaf_handler(const std::vector<int8_t> &signal,
+                   const esiaf_ros::RecordingTimeStamps &timeStamps) { simple_esiaf_callback(signal, timeStamps); };
 
 
 int main(int argc, char **argv) {
 
+    std::string config_file = argv[1];
+
+    boost::property_tree::ptree pt;
+    boost::property_tree::ini_parser::read_ini(config_file, pt);
+
     // some parameters for esiaf
-    std::string topicname = "input";
+    std::string topicname = pt.get<std::string>("input_topic");
 
     // ros initialisation
-    ros::init(argc, argv, "esiaf_grabber");
+    ros::init(argc, argv, pt.get<std::string>("node_name"));
     ros::NodeHandle n;
 
+    // alsa initialisation
     int i;
     int err;
     snd_pcm_t *playback_handle;
     snd_pcm_hw_params_t *hw_params;
 
+    // setting up hardware parameters
+    std::string audio_device = pt.get<std::string>("audio_device");
+    esiaf_ros::Rate sample_rate = esiaf_ros::utils::cfg_to_esaif_rate(pt.get<int>("sample_rate"));
+    esiaf_ros::Bitrate bitrate = esiaf_ros::utils::cfg_to_esiaf_bitrate(pt.get<int>("bitrate"));
+    esiaf_ros::Endian endian = esiaf_ros::utils::cfg_to_esiaf_endian(pt.get<std::string>("endian"));
+    auto channels = pt.get<unsigned int>("channels");
+
+    _snd_pcm_format format = nodes::set_up_format_from_bitrate_and_endian(bitrate, endian);
+    unsigned int sample_rate_ext = nodes::set_up_sample_rate_from_esiaf(sample_rate);
+
     ROS_INFO("preparing audio device...");
-    if ((err = snd_pcm_open(&playback_handle, argv[1], SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
+    if ((err = snd_pcm_open(&playback_handle, audio_device.c_str(), SND_PCM_STREAM_PLAYBACK,
+                            0)) < 0) {
         fprintf(stderr, "cannot open audio device %s (%s)\n",
-                argv[1],
+                audio_device.c_str(),
                 snd_strerror(err));
         exit(1);
     }
@@ -124,20 +194,19 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
-    if ((err = snd_pcm_hw_params_set_format(playback_handle, hw_params, SND_PCM_FORMAT_S16_LE)) < 0) {
+    if ((err = snd_pcm_hw_params_set_format(playback_handle, hw_params, format)) < 0) {
         fprintf(stderr, "cannot set sample format (%s)\n",
                 snd_strerror(err));
         exit(1);
     }
 
-    unsigned int rate = 8000;
-    if ((err = snd_pcm_hw_params_set_rate_near(playback_handle, hw_params, &rate, 0)) < 0) {
+    if ((err = snd_pcm_hw_params_set_rate_near(playback_handle, hw_params, &sample_rate_ext, 0)) < 0) {
         fprintf(stderr, "cannot set sample rate (%s)\n",
                 snd_strerror(err));
         exit(1);
     }
 
-    if ((err = snd_pcm_hw_params_set_channels(playback_handle, hw_params, 1)) < 0) {
+    if ((err = snd_pcm_hw_params_set_channels(playback_handle, hw_params, channels)) < 0) {
         fprintf(stderr, "cannot set channel count (%s)\n",
                 snd_strerror(err));
         exit(1);
@@ -174,10 +243,10 @@ int main(int argc, char **argv) {
     esiaf_ros::EsiafAudioTopicInfo topicInfo;
 
     esiaf_ros::EsiafAudioFormat allowedFormat;
-    allowedFormat.rate = esiaf_ros::Rate::RATE_8000;
-    allowedFormat.channels = 1;
-    allowedFormat.bitrate = esiaf_ros::Bitrate::BIT_8;
-    allowedFormat.endian = esiaf_ros::Endian(1);
+    allowedFormat.rate = sample_rate;
+    allowedFormat.channels = channels;
+    allowedFormat.bitrate = bitrate;
+    allowedFormat.endian = endian;
 
     topicInfo.allowedFormat = allowedFormat;
     topicInfo.topic = topicname;
@@ -187,14 +256,14 @@ int main(int argc, char **argv) {
 
     // here we add a method to transfer incoming audio to the audio player
     simple_esiaf_callback = [&](const std::vector<int8_t> &signal,
-                                const esiaf_ros::RecordingTimeStamps &timeStamps){
+                                const esiaf_ros::RecordingTimeStamps &timeStamps) {
 
-        const int8_t* buf8 = signal.data();
+        const int8_t *buf8 = signal.data();
 
-        int16_t buf16[signal.size()/2];
+        int16_t buf16[signal.size() / 2];
         mempcpy(buf16, buf8, signal.size() * sizeof(int8_t));
 
-        player.add_audio(buf16, signal.size()/2);
+        player.add_audio(buf16, signal.size() / 2);
 
     };
 
@@ -221,7 +290,7 @@ int main(int argc, char **argv) {
 
     ros::spin();
 
-    //snd_pcm_close(playback_handle);
+    snd_pcm_close(playback_handle);
 
     return (0);
 }

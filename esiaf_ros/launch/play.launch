@@ -1,3 +1,4 @@
 <launch>
-<node name="player" pkg="esiaf_ros" type="esiaf_play" output="screen" args="pulse" />
+    <arg name="path_to_config" />
+    <node name="player" pkg="esiaf_ros" type="esiaf_play" output="screen" args="$(arg path_to_config)" />
 </launch>

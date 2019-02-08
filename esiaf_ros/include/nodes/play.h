@@ -8,8 +8,9 @@
 #include <mutex>
 #include <queue>
 #include <alsa/asoundlib.h>
+#include <esiaf_ros.h>
 
-namespace nodes{
+namespace nodes {
 
     /**
      * Class to enclose audio playback. Will spawn a dedicated playing thread and offer a method to add audio to play.
@@ -33,7 +34,7 @@ namespace nodes{
          * @param audio Pointer to audio data
          * @param size Amount of data points available through the audio ponter
          */
-        void add_audio(int16_t* audio, size_t size);
+        void add_audio(int16_t *audio, size_t size);
 
         /**
          * Will stop this audio player and close its pcm handle.
@@ -49,12 +50,12 @@ namespace nodes{
         /**
          * A queue of pointers where audio, which shall be played, can be found.
          */
-        std::queue<int16_t*> playlist;
+        std::queue<int16_t *> playlist;
 
         /**
          * A queue to keep track of the amount of samples available in each of ponters in playlist.
          */
-        std::queue<size_t > playsize;
+        std::queue<size_t> playsize;
 
         /**
          * Mutex lock used to secure the playlist and playsize between the add_audio and playThreadMethod methods.
@@ -80,6 +81,22 @@ namespace nodes{
         //nothing
 
     };
+
+
+    /**
+     * Takes an esiaf_ros Bitrate and Endian and turns them into the corresponding alsa (asoundlib) equivalent.
+     * @param bitrate
+     * @param endian
+     * @return
+     */
+    _snd_pcm_format set_up_format_from_bitrate_and_endian(esiaf_ros::Bitrate bitrate, esiaf_ros::Endian endian);
+
+    /**
+     * Turns an esiaf_ros Rate into an unsigned int describing the same sample rate.
+     * @param sample_rate
+     * @return
+     */
+    unsigned int set_up_sample_rate_from_esiaf(esiaf_ros::Rate sample_rate);
 
 }
 
