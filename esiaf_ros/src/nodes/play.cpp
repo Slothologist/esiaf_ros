@@ -59,7 +59,6 @@ namespace nodes {
                 mutex.unlock();
 
                 snd_pcm_sframes_t frames = snd_pcm_writei(playback_handle, buf, size);
-                ROS_INFO("lala %d", frames);
 
                 // Check for errors
                 if (frames < 0)
