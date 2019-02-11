@@ -5,12 +5,28 @@
 #ifndef ESIAF_ROS_RESAMPLE_H
 #define ESIAF_ROS_RESAMPLE_H
 
+#include "esiaf_ros.h"
 #include <soxr.h>
+#include <vector>
 
 namespace esiaf_ros {
-    namespace topicdata {
+    namespace resampling {
 
-        class Resampler{
+        class Resampler {
+        public:
+            Resampler(esiaf_ros::EsiafAudioFormat inputFormat,
+                      esiaf_ros::EsiafAudioFormat outputFormat);
+
+            void resample(std::vector<int8_t>* signal);
+
+        protected:
+            esiaf_ros::EsiafAudioFormat inputFormat;
+            esiaf_ros::EsiafAudioFormat outputFormat;
+
+        private:
+            soxr_t soxr;
+            double irate;
+            double orate;
 
         };
 
