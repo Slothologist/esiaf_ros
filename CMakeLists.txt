@@ -225,13 +225,18 @@ target_include_directories(esiaf_record PUBLIC esiaf_ros/include/)
 #   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 # )
 
-## Mark executables and/or libraries for installation
-install(TARGETS esiaf_ros
-        esiaf_grabber
+## Mark executables for installation
+install(TARGETS esiaf_grabber
         esiaf_play
         esiaf_record
         DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
         )
+
+## Mark libraries for installation
+install(TARGETS esiaf_ros
+        ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+        LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+        RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION})
 
 ## Mark cpp header files for installation
 install(DIRECTORY ${PROJECT_NAME}/include/
