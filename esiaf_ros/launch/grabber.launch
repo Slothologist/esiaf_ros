@@ -1,3 +1,4 @@
 <launch>
-<node name="grabber" pkg="esiaf_ros" type="esiaf_grabber" output="screen" args="default" />
+    <arg name="path_to_config" />
+<node name="grabber" pkg="esiaf_ros" type="esiaf_grabber" output="screen" args="$(arg path_to_config)" />
 </launch>

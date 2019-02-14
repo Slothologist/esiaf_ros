@@ -77,52 +77,6 @@ namespace nodes {
         }
     }
 
-
-    _snd_pcm_format set_up_format_from_bitrate_and_endian(esiaf_ros::Bitrate bitrate, esiaf_ros::Endian endian) {
-        switch (bitrate){
-            case esiaf_ros::Bitrate::BIT_8 :
-                return SND_PCM_FORMAT_S8;
-            case esiaf_ros::Bitrate::BIT_16 :
-                switch (endian){
-                    case esiaf_ros::Endian::LittleEndian:
-                        return SND_PCM_FORMAT_S16_LE;
-                    case esiaf_ros::Endian::BigEndian:
-                        return SND_PCM_FORMAT_S16_BE;
-                }
-            case esiaf_ros::Bitrate::BIT_24 :
-                switch (endian){
-                    case esiaf_ros::Endian::LittleEndian:
-                        return SND_PCM_FORMAT_S24_LE;
-                    case esiaf_ros::Endian::BigEndian:
-                        return SND_PCM_FORMAT_S24_BE;
-                }
-            case esiaf_ros::Bitrate::BIT_32 :
-                switch (endian){
-                    case esiaf_ros::Endian::LittleEndian:
-                        return SND_PCM_FORMAT_S32_LE;
-                    case esiaf_ros::Endian::BigEndian:
-                        return SND_PCM_FORMAT_S32_BE;
-                }
-        }
-    }
-
-    unsigned int set_up_sample_rate_from_esiaf(esiaf_ros::Rate sample_rate){
-        switch (sample_rate){
-            case esiaf_ros::Rate::RATE_8000:
-                return 8000;
-            case esiaf_ros::Rate::RATE_16000:
-                return 16000;
-            case esiaf_ros::Rate::RATE_32000:
-                return 32000;
-            case esiaf_ros::Rate::RATE_44100:
-                return 44100;
-            case esiaf_ros::Rate::RATE_48000:
-                return 48000;
-            case esiaf_ros::Rate::RATE_96000:
-                return 96000;
-        }
-    }
-
 }
 
 
@@ -159,12 +113,14 @@ int main(int argc, char **argv) {
     // setting up hardware parameters
     std::string audio_device = pt.get<std::string>("audio_device");
     esiaf_ros::Rate sample_rate = esiaf_ros::utils::cfg_to_esaif_rate(pt.get<int>("sample_rate"));
-    esiaf_ros::Bitrate bitrate = esiaf_ros::utils::cfg_to_esiaf_bitrate(pt.get<int>("bitrate"));
+    esiaf_ros::Bitrate bitrate = esiaf_ros::utils::cfg_to_esiaf_bitrate(pt.get<int>("bitrate"),
+                                                                        pt.get<char>("signed_unsigned"),
+                                                                        pt.get<char>("int_float"));
     esiaf_ros::Endian endian = esiaf_ros::utils::cfg_to_esiaf_endian(pt.get<std::string>("endian"));
-    auto channels = pt.get<unsigned int>("channels");
+    auto channels = pt.get <unsigned int> ("channels");
 
-    _snd_pcm_format format = nodes::set_up_format_from_bitrate_and_endian(bitrate, endian);
-    unsigned int sample_rate_ext = nodes::set_up_sample_rate_from_esiaf(sample_rate);
+    _snd_pcm_format format = esiaf_ros::utils::set_up_format_from_bitrate_and_endian(bitrate, endian);
+    unsigned int sample_rate_ext = esiaf_ros::utils::set_up_sample_rate_from_esiaf(sample_rate);
 
     ROS_INFO("preparing audio device...");
     if ((err = snd_pcm_open(&playback_handle, audio_device.c_str(), SND_PCM_STREAM_PLAYBACK,

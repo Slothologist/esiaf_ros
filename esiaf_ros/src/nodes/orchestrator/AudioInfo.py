@@ -8,26 +8,32 @@ from enum import Enum
 
 class Bitrate(Enum):
     """Enum that defines the available bitrates"""
-    BIT_8 = 8
-    BIT_16 = 16
-    BIT_24 = 24
-    BIT_32 = 32
+    BIT_INT_8_SIGNED = esiaf_msg.AudioTopicFormatConstants.BIT_INT_8_SIGNED
+    BIT_INT_8_UNSIGNED = esiaf_msg.AudioTopicFormatConstants.BIT_INT_8_UNSIGNED
+    BIT_INT_16_SIGNED = esiaf_msg.AudioTopicFormatConstants.BIT_INT_16_SIGNED
+    BIT_INT_16_UNSIGNED = esiaf_msg.AudioTopicFormatConstants.BIT_INT_16_UNSIGNED
+    BIT_INT_24_SIGNED = esiaf_msg.AudioTopicFormatConstants.BIT_INT_24_SIGNED
+    BIT_INT_24_UNSIGNED = esiaf_msg.AudioTopicFormatConstants.BIT_INT_24_UNSIGNED
+    BIT_INT_32_SIGNED = esiaf_msg.AudioTopicFormatConstants.BIT_INT_32_SIGNED
+    BIT_INT_32_UNSIGNED = esiaf_msg.AudioTopicFormatConstants.BIT_INT_32_UNSIGNED
+    BIT_FLOAT_32 = esiaf_msg.AudioTopicFormatConstants.BIT_FLOAT_32
+    BIT_FLOAT_64 = esiaf_msg.AudioTopicFormatConstants.BIT_FLOAT_64
 
 
 class Endian(Enum):
     """Enum that defines the available endian types"""
-    LE = 1
-    BE = 10
+    LE = esiaf_msg.AudioTopicFormatConstants.LittleEndian
+    BE = esiaf_msg.AudioTopicFormatConstants.BigEndian
 
 
 class AudioRate(Enum):
     """Endian that defines the available Audiorates"""
-    RATE_8000 = 8
-    RATE_16000 = 16
-    RATE_32000 = 32
-    RATE_44100 = 44
-    RATE_48000 = 48
-    RATE_96000 = 96
+    RATE_8000 = esiaf_msg.AudioTopicFormatConstants.RATE_8000
+    RATE_16000 = esiaf_msg.AudioTopicFormatConstants.RATE_16000
+    RATE_32000 = esiaf_msg.AudioTopicFormatConstants.RATE_32000
+    RATE_44100 = esiaf_msg.AudioTopicFormatConstants.RATE_44100
+    RATE_48000 = esiaf_msg.AudioTopicFormatConstants.RATE_48000
+    RATE_96000 = esiaf_msg.AudioTopicFormatConstants.RATE_96000
 
 
 # Then some utilities classes

@@ -21,18 +21,47 @@ namespace esiaf_ros {
         }
 
 
-        esiaf_ros::Bitrate cfg_to_esiaf_bitrate(int bitrate) {
+        esiaf_ros::Bitrate cfg_to_esiaf_bitrate(int bitrate, char signed_value, char type_value) {
+            if(!(signed_value == 's' || signed_value == 'u')){
+                std::string ex_text = " signed value of %c, but only s (signed) and u (unsigned) are allowed at this point!", signed_value;
+                throw std::invalid_argument(ex_text);
+            }
+            if(!(type_value == 'i' || type_value == 'f')){
+                std::string ex_text = " type value of %c, but only i (int) and f (float) are allowed at this point!", type_value;
+                throw std::invalid_argument(ex_text);
+            }
             switch (bitrate) {
                 case 8 :
-                    return esiaf_ros::Bitrate::BIT_8;
+                    if (signed_value == 's'){
+                        return esiaf_ros::Bitrate::BIT_INT_8_SIGNED;
+                    } else{
+                        return esiaf_ros::Bitrate::BIT_INT_8_UNSIGNED;
+                    }
                 case 16 :
-                    return esiaf_ros::Bitrate::BIT_16;
+                    if (signed_value == 's'){
+                        return esiaf_ros::Bitrate::BIT_INT_16_SIGNED;
+                    } else{
+                        return esiaf_ros::Bitrate::BIT_INT_16_UNSIGNED;
+                    }
                 case 24 :
-                    return esiaf_ros::Bitrate::BIT_24;
+                    if (signed_value == 's'){
+                        return esiaf_ros::Bitrate::BIT_INT_24_SIGNED;
+                    } else{
+                        return esiaf_ros::Bitrate::BIT_INT_24_UNSIGNED;
+                    }
                 case 32 :
-                    return esiaf_ros::Bitrate::BIT_32;
+                    if (type_value == 'f'){
+                        return esiaf_ros::Bitrate::BIT_FLOAT_32;
+                    }
+                    if (signed_value == 's'){
+                        return esiaf_ros::Bitrate::BIT_INT_32_SIGNED;
+                    } else{
+                        return esiaf_ros::Bitrate::BIT_INT_32_UNSIGNED;
+                    }
+                case 64:
+                    return esiaf_ros::Bitrate::BIT_FLOAT_64;
                 default:
-                    std::string ex_text = " received %d, but only 8, 16, 24 and 32 bit are allowed at this point!", bitrate;
+                    std::string ex_text = " received %d, but only 8, 16, 24, 32 and 64 bit are allowed at this point!", bitrate;
                     throw std::invalid_argument(ex_text);
             }
         }
@@ -72,6 +101,81 @@ namespace esiaf_ros {
                 default:
                     std::string ex_text = " received %d, but only 8k, 16k, 32k, 441000, 48k and 96k Hz are allowed at this point!", rate;
                     throw std::invalid_argument(ex_text);
+            }
+        }
+
+
+        _snd_pcm_format set_up_format_from_bitrate_and_endian(esiaf_ros::Bitrate bitrate, esiaf_ros::Endian endian) {
+            switch (bitrate) {
+                case esiaf_ros::Bitrate::BIT_INT_8_SIGNED :
+                    return SND_PCM_FORMAT_S8;
+                case esiaf_ros::Bitrate::BIT_INT_8_UNSIGNED :
+                    return SND_PCM_FORMAT_U8;
+                case esiaf_ros::Bitrate::BIT_INT_16_SIGNED :
+                    switch (endian) {
+                        case esiaf_ros::Endian::LittleEndian:
+                            return SND_PCM_FORMAT_S16_LE;
+                        case esiaf_ros::Endian::BigEndian:
+                            return SND_PCM_FORMAT_S16_BE;
+                    }
+                case esiaf_ros::Bitrate::BIT_INT_16_UNSIGNED :
+                    switch (endian) {
+                        case esiaf_ros::Endian::LittleEndian:
+                            return SND_PCM_FORMAT_U16_LE;
+                        case esiaf_ros::Endian::BigEndian:
+                            return SND_PCM_FORMAT_U16_BE;
+                    }
+                case esiaf_ros::Bitrate::BIT_INT_24_SIGNED :
+                    switch (endian) {
+                        case esiaf_ros::Endian::LittleEndian:
+                            return SND_PCM_FORMAT_S24_LE;
+                        case esiaf_ros::Endian::BigEndian:
+                            return SND_PCM_FORMAT_S24_BE;
+                    }
+                case esiaf_ros::Bitrate::BIT_INT_24_UNSIGNED :
+                    switch (endian) {
+                        case esiaf_ros::Endian::LittleEndian:
+                            return SND_PCM_FORMAT_U24_LE;
+                        case esiaf_ros::Endian::BigEndian:
+                            return SND_PCM_FORMAT_U24_BE;
+                    }
+                case esiaf_ros::Bitrate::BIT_INT_32_SIGNED :
+                    switch (endian) {
+                        case esiaf_ros::Endian::LittleEndian:
+                            return SND_PCM_FORMAT_S32_LE;
+                        case esiaf_ros::Endian::BigEndian:
+                            return SND_PCM_FORMAT_S32_BE;
+                    }
+                case esiaf_ros::Bitrate::BIT_INT_32_UNSIGNED :
+                    switch (endian) {
+                        case esiaf_ros::Endian::LittleEndian:
+                            return SND_PCM_FORMAT_U32_LE;
+                        case esiaf_ros::Endian::BigEndian:
+                            return SND_PCM_FORMAT_U32_BE;
+                    }
+                case esiaf_ros::Bitrate::BIT_FLOAT_32 :
+                    return SND_PCM_FORMAT_FLOAT;
+                case esiaf_ros::Bitrate::BIT_FLOAT_64 :
+                    return SND_PCM_FORMAT_FLOAT64;
+                default:
+                    return SND_PCM_FORMAT_UNKNOWN;
+            }
+        }
+
+        unsigned int set_up_sample_rate_from_esiaf(esiaf_ros::Rate sample_rate) {
+            switch (sample_rate) {
+                case esiaf_ros::Rate::RATE_8000:
+                    return 8000;
+                case esiaf_ros::Rate::RATE_16000:
+                    return 16000;
+                case esiaf_ros::Rate::RATE_32000:
+                    return 32000;
+                case esiaf_ros::Rate::RATE_44100:
+                    return 44100;
+                case esiaf_ros::Rate::RATE_48000:
+                    return 48000;
+                case esiaf_ros::Rate::RATE_96000:
+                    return 96000;
             }
         }
 

@@ -24,6 +24,7 @@ namespace esiaf_ros {
         void TopicData::setActualFormat(esiaf_ros::AudioFormat actualFormat) {
             this->actualFormat = actualFormat;
             determine_resampling_necessary();
+            //ROS_INFO("resampling necessary? %d", resampling_necessary);
             if (resampling_necessary) {
                 initialize_resampler();
             } else if (resampler != nullptr) {
@@ -58,7 +59,7 @@ namespace esiaf_ros {
             std::vector<int8_t> signal = msg->signal;
             // ignore channel for now
             if (resampling_necessary) {
-                resampler->resample(&signal);
+                signal = resampler->resample(signal);
             }
             try {
                 userCallback(signal, time);
@@ -73,7 +74,7 @@ namespace esiaf_ros {
             actualEsiaf.rate = esiaf_ros::Rate(actualFormat.rate);
             actualEsiaf.bitrate = esiaf_ros::Bitrate(actualFormat.bitrate);
             actualEsiaf.endian = esiaf_ros::Endian(actualFormat.endian);
-            actualEsiaf.channels = actualEsiaf.channels;
+            actualEsiaf.channels = actualFormat.channels;
             resampler = new resampling::Resampler(actualEsiaf, topic.allowedFormat);
         }
 
@@ -90,7 +91,7 @@ namespace esiaf_ros {
         void OutputTopicData::publish(std::vector<int8_t> signal, esiaf_ros::RecordingTimeStamps timeStamps) {
 
             if (resampling_necessary) {
-                resampler->resample(&signal);
+                signal = resampler->resample(signal);
             }
             esiaf_ros::AugmentedAudio msg;
             msg.signal = signal;
@@ -104,7 +105,7 @@ namespace esiaf_ros {
             actualEsiaf.rate = esiaf_ros::Rate(actualFormat.rate);
             actualEsiaf.bitrate = esiaf_ros::Bitrate(actualFormat.bitrate);
             actualEsiaf.endian = esiaf_ros::Endian(actualFormat.endian);
-            actualEsiaf.channels = actualEsiaf.channels;
+            actualEsiaf.channels = actualFormat.channels;
             resampler = new resampling::Resampler(topic.allowedFormat, actualEsiaf);
         }
     }

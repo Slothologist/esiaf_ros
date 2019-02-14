@@ -2,11 +2,19 @@
 // Created by rfeldhans on 16.01.19.
 //
 
+//signal handler and threading
+#include <csignal>
 #include <thread>
+
 #include "ros/ros.h"
 #include <esiaf_ros.h>
 #include "esiaf_ros/RecordingTimeStamps.h"
+#include "nodes/utils.h"
 #include <alsa/asoundlib.h>
+
+// boost config read imports
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ini_parser.hpp>
 
 std::function<void(std::vector<int8_t>, const ros::Time &, const ros::Time &)> publish_audio_func;
 
@@ -16,11 +24,16 @@ void publish_audio(std::vector<int8_t> signal, const ros::Time &start_time, cons
 
 int main(int argc, char **argv) {
 
+    std::string config_file = argv[1];
+
+    boost::property_tree::ptree pt;
+    boost::property_tree::ini_parser::read_ini(config_file, pt);
+
     // some parameters for esiaf
-    std::string topicname = "input";
+    std::string topicname = pt.get<std::string>("output_topic");
 
     // ros initialisation
-    ros::init(argc, argv, "esiaf_grabber");
+    ros::init(argc, argv, pt.get<std::string>("node_name"));
     ros::NodeHandle n;
 
     // alsa initialisation
@@ -30,15 +43,27 @@ int main(int argc, char **argv) {
     snd_pcm_t *capture_handle;
     snd_pcm_hw_params_t *hw_params;
 
+    // setting up hardware parameters
+    std::string audio_device = pt.get<std::string>("audio_device");
+    esiaf_ros::Rate sample_rate = esiaf_ros::utils::cfg_to_esaif_rate(pt.get<int>("sample_rate"));
+    esiaf_ros::Bitrate bitrate = esiaf_ros::utils::cfg_to_esiaf_bitrate(pt.get<int>("bitrate"),
+                                                                        pt.get<char>("signed_unsigned"),
+                                                                        pt.get<char>("int_float"));
+    esiaf_ros::Endian endian = esiaf_ros::utils::cfg_to_esiaf_endian(pt.get<std::string>("endian"));
+    auto channels = pt.get <unsigned int> ("channels");
+
+    _snd_pcm_format format = esiaf_ros::utils::set_up_format_from_bitrate_and_endian(bitrate, endian);
+    unsigned int sample_rate_ext = esiaf_ros::utils::set_up_sample_rate_from_esiaf(sample_rate);
+
     //////////////////////////////////////////////////////
     // so much alsa stuff
     //////////////////////////////////////////////////////
 
     ROS_INFO("preparing audio device...");
 
-    if ((err = snd_pcm_open(&capture_handle, argv[1], SND_PCM_STREAM_CAPTURE, 0)) < 0) {
+    if ((err = snd_pcm_open(&capture_handle, audio_device.c_str(), SND_PCM_STREAM_CAPTURE, 0)) < 0) {
         fprintf(stderr, "cannot open audio device %s (%s)\n",
-                argv[1],
+                audio_device.c_str(),
                 snd_strerror(err));
         exit(1);
     }
@@ -61,20 +86,19 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
-    if ((err = snd_pcm_hw_params_set_format(capture_handle, hw_params, SND_PCM_FORMAT_S16_LE)) < 0) {
+    if ((err = snd_pcm_hw_params_set_format(capture_handle, hw_params, format)) < 0) {
         fprintf(stderr, "cannot set sample format (%s)\n",
                 snd_strerror(err));
         exit(1);
     }
 
-    unsigned int rate = 8000;
-    if ((err = snd_pcm_hw_params_set_rate_near(capture_handle, hw_params, &rate, 0)) < 0) {
+    if ((err = snd_pcm_hw_params_set_rate_near(capture_handle, hw_params, &sample_rate_ext, 0)) < 0) {
         fprintf(stderr, "cannot set sample rate (%s)\n",
                 snd_strerror(err));
         exit(1);
     }
 
-    if ((err = snd_pcm_hw_params_set_channels(capture_handle, hw_params, 1)) < 0) {
+    if ((err = snd_pcm_hw_params_set_channels(capture_handle, hw_params, channels)) < 0) {
         fprintf(stderr, "cannot set channel count (%s)\n",
                 snd_strerror(err));
         exit(1);
@@ -110,10 +134,10 @@ int main(int argc, char **argv) {
     esiaf_ros::EsiafAudioTopicInfo topicInfo;
 
     esiaf_ros::EsiafAudioFormat allowedFormat;
-    allowedFormat.rate = esiaf_ros::Rate::RATE_8000;
-    allowedFormat.channels = 1;
-    allowedFormat.bitrate = esiaf_ros::Bitrate::BIT_8;
-    allowedFormat.endian = esiaf_ros::Endian(1);
+    allowedFormat.rate = sample_rate;
+    allowedFormat.channels = channels;
+    allowedFormat.bitrate = bitrate;
+    allowedFormat.endian = endian;
 
     topicInfo.allowedFormat = allowedFormat;
     topicInfo.topic = topicname;

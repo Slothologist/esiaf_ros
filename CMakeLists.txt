@@ -55,6 +55,7 @@ add_message_files(
         DIRECTORY esiaf_ros/msgs
         FILES
         AudioFormat.msg
+        AudioTopicFormatConstants.msg
         AudioTopicInfo.msg
         AugmentedAudio.msg
         ChangedConfig.msg

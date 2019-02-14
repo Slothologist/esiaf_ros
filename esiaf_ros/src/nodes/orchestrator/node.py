@@ -6,6 +6,19 @@ from AudioInfo import *
 from esiaf_ros.msg import ChangedConfig
 from SubMsgSubscriber import SubMsgSubscriber
 
+# util imports
+from enum import Enum
+
+
+class Designation(Enum):
+    """Enum that defines the available endian types"""
+    VAD = esiaf_msg.AudioTopicFormatConstants.VAD
+    SpeechRec = esiaf_msg.AudioTopicFormatConstants.SpeechRec
+    SSL = esiaf_msg.AudioTopicFormatConstants.SSL
+    Gender = esiaf_msg.AudioTopicFormatConstants.Gender
+    Emotion = esiaf_msg.AudioTopicFormatConstants.Emotion
+    VoiceId = esiaf_msg.AudioTopicFormatConstants.VoiceId
+    Other = esiaf_msg.AudioTopicFormatConstants.Other
 
 class Node:
     """

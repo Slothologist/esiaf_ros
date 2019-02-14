@@ -38,6 +38,7 @@ namespace esiaf_ros {
 
     void handle_changed_config(esiaf_handle* esiafHandle,
                                const esiaf_ros::ChangedConfig& msg){
+        ROS_INFO("changed config");
         for(auto input : esiafHandle->inputs){ // auto = topicdata::InputTopicData
             for(auto changedInput: msg.inputTopics){
                 if(input.getTopicName() == changedInput.topic){

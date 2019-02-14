@@ -1,0 +1,28 @@
+int32 RATE_8000 = 8000
+int32 RATE_16000 = 16000
+int32 RATE_32000 = 32000
+int32 RATE_44100 = 44100
+int32 RATE_48000 = 48000
+int32 RATE_96000 = 96000
+
+int32 BIT_INT_8_SIGNED = 1
+int32 BIT_INT_8_UNSIGNED = 2
+int32 BIT_INT_16_SIGNED = 3
+int32 BIT_INT_16_UNSIGNED = 4
+int32 BIT_INT_24_SIGNED = 5
+int32 BIT_INT_24_UNSIGNED = 6
+int32 BIT_INT_32_SIGNED = 7
+int32 BIT_INT_32_UNSIGNED = 8
+int32 BIT_FLOAT_32 = 9
+int32 BIT_FLOAT_64 = 10
+
+int32 LittleEndian = 1
+int32 BigEndian = 10
+
+int8 VAD = 1
+int8 SpeechRec = 2
+int8 SSL = 3
+int8 Gender = 4
+int8 Emotion = 5
+int8 VoiceId = 6
+int8 Other = 7
