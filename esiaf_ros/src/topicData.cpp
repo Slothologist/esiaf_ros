@@ -13,31 +13,45 @@ namespace esiaf_ros {
         /////////////////////////////////////////////////////////////////////////////////////
 
         std::string TopicData::getTopicName() {
-            return topic.topic;
+            return this->topic.topic;
         }
 
         esiaf_ros::EsiafAudioTopicInfo TopicData::getInfo() {
-            return topic;
+            return this->topic;
         }
 
 
         void TopicData::setActualFormat(esiaf_ros::AudioFormat actualFormat) {
-            this->actualFormat = actualFormat;
-            determine_resampling_necessary();
-            //ROS_INFO("resampling necessary? %d", resampling_necessary);
-            if (resampling_necessary) {
+            EsiafAudioFormat act;
+            act.rate = esiaf_ros::Rate(actualFormat.rate);
+            act.bitrate = esiaf_ros::Bitrate(actualFormat.bitrate);
+            act.endian = esiaf_ros::Endian(actualFormat.endian);
+            act.channels = actualFormat.channels;
+
+            this->actualFormat = act;
+
+            if (determine_resampling_necessary()) {
+                ROS_DEBUG("should create resampler");
                 initialize_resampler();
-            } else if (resampler != nullptr) {
-                free(resampler);
+            } else if (this->resampler != nullptr) {
+                ROS_INFO("getting rid of resampler");
+                free(this->resampler);
             }
         }
 
 
-        void TopicData::determine_resampling_necessary() {
-            resampling_necessary = topic.allowedFormat.rate == esiaf_ros::Rate(actualFormat.rate)
-                                   && topic.allowedFormat.bitrate == esiaf_ros::Bitrate(actualFormat.bitrate)
-                                   && topic.allowedFormat.endian == esiaf_ros::Endian(actualFormat.endian)
-                                   && topic.allowedFormat.channels == actualFormat.channels;
+        bool TopicData::determine_resampling_necessary() {
+            ROS_DEBUG("rate, allowed: %d, actual: %d", topic.allowedFormat.rate, actualFormat.rate);
+            ROS_DEBUG("bitrate, allowed: %d, actual: %d", topic.allowedFormat.bitrate, actualFormat.bitrate);
+            ROS_DEBUG("endian, allowed: %d, actual: %d", topic.allowedFormat.endian, actualFormat.endian);
+            ROS_DEBUG("channel, allowed: %d, actual: %d", topic.allowedFormat.channels, actualFormat.channels);
+
+            bool resampling_necessary = !(topic.allowedFormat.rate == actualFormat.rate
+                                     && topic.allowedFormat.bitrate == actualFormat.bitrate
+                                     && topic.allowedFormat.endian == actualFormat.endian
+                                     && topic.allowedFormat.channels == actualFormat.channels);
+            ROS_DEBUG("set resampling necessary? %d", resampling_necessary);
+            return resampling_necessary;
         }
 
         /////////////////////////////////////////////////////////////////////////////////////
@@ -50,7 +64,8 @@ namespace esiaf_ros {
                                                             const esiaf_ros::RecordingTimeStamps &)> callback_ptr) :
                 userCallback(callback_ptr) {
             this->topic = topic;
-            subscriber = nodeHandle->subscribe<esiaf_ros::AugmentedAudio>(topic.topic, 1000, boost::bind(
+            this->actualFormat = topic.allowedFormat;
+            this->subscriber = nodeHandle->subscribe<esiaf_ros::AugmentedAudio>(topic.topic, 1000, boost::bind(
                     &InputTopicData::internal_subscriber_callback, this, _1));
         }
 
@@ -58,8 +73,9 @@ namespace esiaf_ros {
             esiaf_ros::RecordingTimeStamps time = msg->time;
             std::vector<int8_t> signal = msg->signal;
             // ignore channel for now
-            if (resampling_necessary) {
-                signal = resampler->resample(signal);
+            if (determine_resampling_necessary()) {
+                ROS_INFO("input topicdata resampling call");
+                signal = this->resampler->resample(signal);
             }
             try {
                 userCallback(signal, time);
@@ -70,12 +86,7 @@ namespace esiaf_ros {
         }
 
         void InputTopicData::initialize_resampler() {
-            esiaf_ros::EsiafAudioFormat actualEsiaf; //=actualFormat
-            actualEsiaf.rate = esiaf_ros::Rate(actualFormat.rate);
-            actualEsiaf.bitrate = esiaf_ros::Bitrate(actualFormat.bitrate);
-            actualEsiaf.endian = esiaf_ros::Endian(actualFormat.endian);
-            actualEsiaf.channels = actualFormat.channels;
-            resampler = new resampling::Resampler(actualEsiaf, topic.allowedFormat);
+            this->resampler = new resampling::Resampler(this->actualFormat, this->topic.allowedFormat);
         }
 
         /////////////////////////////////////////////////////////////////////////////////////
@@ -85,28 +96,25 @@ namespace esiaf_ros {
         OutputTopicData::OutputTopicData(ros::NodeHandle *nodeHandle, esiaf_ros::EsiafAudioTopicInfo topic) {
 
             this->topic = topic;
-            publisher = nodeHandle->advertise<esiaf_ros::AugmentedAudio>(topic.topic, 1000);
+            this->actualFormat = topic.allowedFormat;
+            this->publisher = nodeHandle->advertise<esiaf_ros::AugmentedAudio>(topic.topic, 1000);
         }
 
         void OutputTopicData::publish(std::vector<int8_t> signal, esiaf_ros::RecordingTimeStamps timeStamps) {
 
-            if (resampling_necessary) {
-                signal = resampler->resample(signal);
+            if (determine_resampling_necessary()) {
+                ROS_INFO("output topicdata resampling call");
+                signal = this->resampler->resample(signal);
             }
             esiaf_ros::AugmentedAudio msg;
             msg.signal = signal;
             msg.time = timeStamps;
-            msg.channel = actualFormat.channels;
-            publisher.publish(msg);
+            msg.channel = this->actualFormat.channels;
+            this->publisher.publish(msg);
         }
 
         void OutputTopicData::initialize_resampler() {
-            esiaf_ros::EsiafAudioFormat actualEsiaf; //=actualFormat
-            actualEsiaf.rate = esiaf_ros::Rate(actualFormat.rate);
-            actualEsiaf.bitrate = esiaf_ros::Bitrate(actualFormat.bitrate);
-            actualEsiaf.endian = esiaf_ros::Endian(actualFormat.endian);
-            actualEsiaf.channels = actualFormat.channels;
-            resampler = new resampling::Resampler(topic.allowedFormat, actualEsiaf);
+            this->resampler = new resampling::Resampler(this->topic.allowedFormat, this->actualFormat);
         }
     }
 }

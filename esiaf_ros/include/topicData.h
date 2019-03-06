@@ -27,19 +27,17 @@ namespace esiaf_ros {
             esiaf_ros::EsiafAudioTopicInfo getInfo();
 
             void setActualFormat(esiaf_ros::AudioFormat actualFormat);
+            bool determine_resampling_necessary();
 
         protected:
             esiaf_ros::EsiafAudioTopicInfo topic;
 
-            bool resampling_necessary = false;
-            esiaf_ros::AudioFormat actualFormat;
+            esiaf_ros::EsiafAudioFormat actualFormat;
 
             virtual void initialize_resampler() = 0;
 
             resampling::Resampler *resampler = nullptr;
 
-        private:
-            void determine_resampling_necessary();
 
         };
 
@@ -54,6 +52,8 @@ namespace esiaf_ros {
                            esiaf_ros::EsiafAudioTopicInfo topic,
                            boost::function<void(const std::vector<int8_t> &,
                                                 const esiaf_ros::RecordingTimeStamps &)> callback_ptr);
+
+            void operator=(InputTopicData const &) = delete;  // delete the copy-assignment operator
 
         protected:
             void initialize_resampler();
@@ -74,6 +74,8 @@ namespace esiaf_ros {
 
         public:
             OutputTopicData(ros::NodeHandle *nodeHandle, esiaf_ros::EsiafAudioTopicInfo topic);
+
+            void operator=(OutputTopicData const &) = delete;  // delete the copy-assignment operator
 
             void publish(std::vector<int8_t> signal, esiaf_ros::RecordingTimeStamps timeStamps);
 
