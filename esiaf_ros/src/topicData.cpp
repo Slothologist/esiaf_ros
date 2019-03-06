@@ -41,9 +41,9 @@ namespace esiaf_ros {
 
 
         bool TopicData::determine_resampling_necessary() {
-            ROS_DEBUG("rate, allowed: %d, actual: %d", topic.allowedFormat.rate, actualFormat.rate);
-            ROS_DEBUG("bitrate, allowed: %d, actual: %d", topic.allowedFormat.bitrate, actualFormat.bitrate);
-            ROS_DEBUG("endian, allowed: %d, actual: %d", topic.allowedFormat.endian, actualFormat.endian);
+            ROS_DEBUG("rate, allowed: %d, actual: %d", (int)topic.allowedFormat.rate, (int)actualFormat.rate);
+            ROS_DEBUG("bitrate, allowed: %d, actual: %d", (int)topic.allowedFormat.bitrate, (int)actualFormat.bitrate);
+            ROS_DEBUG("endian, allowed: %d, actual: %d", (int)topic.allowedFormat.endian, (int)actualFormat.endian);
             ROS_DEBUG("channel, allowed: %d, actual: %d", topic.allowedFormat.channels, actualFormat.channels);
 
             bool resampling_necessary = !(topic.allowedFormat.rate == actualFormat.rate
