@@ -39,7 +39,7 @@ class Node:
     def __init__(self, nodeinfo):
         self.name = nodeinfo.name
         self.designation = nodeinfo.designation
-        self.configPublisher = rospy.Publisher('/esiaf_ros' + self.name + '/changedConfig', ChangedConfig, queue_size=10)
+        self.configPublisher = rospy.Publisher('/esiaf_ros' + self.name + '/changedConfig', ChangedConfig, queue_size=10, latch=True)
 
         self.allowedTopicsIn = []
         self.allowedTopicsOut = []
@@ -78,7 +78,7 @@ class Node:
             config.outputTopics.append(determinedConfig)
 
         self.configPublisher.publish(config)
-        rospy.logdebug('Providing new config for "' + self.name + '": ' + str(config))
+        rospy.loginfo('Providing new config for "' + self.name + '": ' + str(config))
 
     def bury(self):
         """
@@ -89,3 +89,14 @@ class Node:
         rospy.loginfo('Node %s has vanished. Removing it from pipeline!' % self.name)
         # self.subMsgSubscriber.subscriber.unregister()
         del self
+
+    def __str__(self):
+        string = 'Node [\n\t'
+        string += 'Nodename: {}\n\t'.format(self.name)
+        string += 'Designation: {}\n\t'.format(self.designation)
+        string += 'Allowed Input topics: {}\n\t'.format(self.allowedTopicsIn)
+        string += 'Allowed Output topics: {}\n\t'.format(self.allowedTopicsOut)
+        string += 'Actual Input topics: {}\n\t'.format(self.actualTopicsIn)
+        string += 'Actual Output topics: {}\n'.format(self.actualTopicsOut)
+        string += ']'
+        return string

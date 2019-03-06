@@ -88,3 +88,10 @@ class AudioTopicInfo:
         rosified.allowedFormat = self.allowedFormat.to_ros()
         return rosified
 
+    def __str__(self):
+        string = 'AudioTopicInfo[\n\t'
+        string += 'topic: {}\n\t'.format(self.topic)
+        string += 'allowedFormat: {}\n'.format(str(self.allowedFormat))
+        string += ']'
+        return string
+
