@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package>
     <name>esiaf_ros</name>
-    <version>0.0.1</version>
+    <version>0.0.2</version>
     <description>esiaf (Enhanced Sound Integration And Framework, pronounced easy a f) is a library to exchange audio signals between several applications over ros</description>
 
     <maintainer email="rfeldh@gmail.com">Robert Feldhans</maintainer>

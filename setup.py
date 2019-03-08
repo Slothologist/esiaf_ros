@@ -5,7 +5,7 @@ from catkin_pkg.python_setup import generate_distutils_setup
 # fetch values from package.xml
 setup_args = generate_distutils_setup(
     name='esiaf_ros',
-    version='0.0.1',
+    version='0.0.2',
     description='esiaf (Enhanced Sound Integration And Framework, pronounced easy a f) is a library to exchange audio signals between several applications over ros',
     url='---none---',
     author='rfeldhans',
@@ -13,8 +13,8 @@ setup_args = generate_distutils_setup(
     license='---none---',
     install_requires=[
     ],
-    packages=find_packages(),
-    package_dir={'orchestrator': 'esiaf_ros/src/nodes/orchestrator'}
+    packages=['orchestrator'],
+    package_dir={'': 'esiaf_ros/src/nodes'}
 )
 
 setup(**setup_args)

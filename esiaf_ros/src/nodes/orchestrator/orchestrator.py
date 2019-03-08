@@ -3,7 +3,8 @@ import rosnode
 import rospy
 
 # esiaf imports
-from node import Node
+from .node import Node
+from .AudioInfo import AudioFormat as AudioFormatInternal
 from esiaf_ros.msg import *
 from esiaf_ros.srv import *
 
@@ -12,9 +13,6 @@ import threading
 import time
 import signal
 import sys
-
-# imports for mocks
-from AudioInfo import AudioFormat
 
 
 class Orchestrator:
@@ -73,10 +71,10 @@ class Orchestrator:
                 except:
                     return False
 
-
             still_active_nodes = [x for x in self.active_nodes if
                                   x.name in momentary_nodenames]
-            dead_nodes = [x for x in self.active_nodes if x.name not in momentary_nodenames or not check_node_ping(x.name)]
+            dead_nodes = [x for x in self.active_nodes if
+                          x.name not in momentary_nodenames or not check_node_ping(x.name)]
             crashed_nodes = [x for x in self.active_nodes if not check_node_ping(x.name)]
 
             if dead_nodes:
@@ -96,7 +94,7 @@ class Orchestrator:
         :return: 
         """
         new_node = Node(nodeinfo)
-        rospy.loginfo('Registering new node: ' + str(nodeinfo))
+        rospy.loginfo('Registering new node: \n' + str(nodeinfo))
 
         with self.active_nodes_lock:
             self.active_nodes.append(new_node)
@@ -126,6 +124,24 @@ class Orchestrator:
     ###
     ####################################################################################
 
+    def calculate_audio_tree_naive(self):
+        basic_format = AudioFormatInternal(8000, 7, 1, 1)
+
+        for node in self.active_nodes:
+            rospy.loginfo("node in active nodes during calculation of audio tree \n" + str(node))
+            node.actualTopicsIn = []
+            node.actualTopicsOut = []
+            for intopic in node.allowedTopicsIn:
+                node.actualTopicsIn.append((intopic.topic, basic_format))
+            for outtopic in node.allowedTopicsOut:
+                node.actualTopicsOut.append((outtopic.topic, basic_format))
+
+            rospy.loginfo('audio tree calc actualtopics IN')
+            rospy.loginfo(str(node.actualTopicsIn))
+            rospy.loginfo('audio tree calc actualtopics OUT')
+            rospy.loginfo(str(node.actualTopicsOut))
+            node.update_config()
+
     def check_for_new_data_naive(self):
         """
         naive method for mocking checks whether all
@@ -133,14 +149,3 @@ class Orchestrator:
         """
         with self.active_nodes_lock:
             return all([x.subMsgSubscriber.last_msgs for x in self.active_nodes])
-
-    def calculate_audio_tree_naive(self):
-        basic_format = AudioFormat(8000, 3, 1, 1)
-
-        for node in self.active_nodes:
-            for intopic in node.allowedTopicsIn:
-                node.actualTopicsIn.append((intopic.topic, basic_format))
-            for outtopic in node.allowedTopicsOut:
-                node.actualTopicsOut.append((outtopic.topic, basic_format))
-
-            node.update_config()

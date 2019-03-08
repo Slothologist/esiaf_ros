@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from esiaf_ros.src.nodes.orchestrator.orchestrator import Orchestrator
+from orchestrator.orchestrator import Orchestrator
 from esiaf_ros.msg import *
 import rospy
 
