@@ -247,7 +247,11 @@ install(DIRECTORY ${PROJECT_NAME}/include/
  )
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
-install(DIRECTORY ${PROJECT_NAME}/launch/
+install(DIRECTORY ${PROJECT_NAME}/launch
+        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+        )
+
+install(DIRECTORY ${PROJECT_NAME}/config
         DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
         )
 
