@@ -143,6 +143,7 @@ catkin_package(
         INCLUDE_DIRS
         esiaf_ros/include
         esiaf_ros/include/nodes
+        LIBRARIES ${PROJECT_NAME}
 )
 
 ###########
