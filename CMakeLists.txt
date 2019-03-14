@@ -20,7 +20,7 @@ find_package(Boost REQUIRED)
 find_package(ALSA REQUIRED)
 
 find_library(SOXR NAMES soxr)
-if (NOT SOXR)
+if (NOT soxr_FOUND)
     message(FATAL_ERROR "soxr library not found")
 endif()
 
@@ -243,6 +243,7 @@ install(TARGETS esiaf_ros
 ## Mark cpp header files for installation
 install(DIRECTORY ${PROJECT_NAME}/include/
    DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+   FILES_MATCHING PATTERN "esiaf_ros.h"
  )
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
