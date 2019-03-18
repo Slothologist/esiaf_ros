@@ -26,13 +26,14 @@ namespace esiaf_ros {
 
             esiaf_ros::EsiafAudioTopicInfo getInfo();
 
-            void setActualFormat(esiaf_ros::AudioFormat actualFormat);
+            void setLibrarySideFormat(esiaf_ros::AudioFormat librarySideFormat);
             bool determine_resampling_necessary();
 
         protected:
             esiaf_ros::EsiafAudioTopicInfo topic;
 
-            esiaf_ros::EsiafAudioFormat actualFormat;
+            esiaf_ros::EsiafAudioFormat clientSideFormat;
+            esiaf_ros::EsiafAudioFormat librarySideFormat;
 
             virtual void initialize_resampler() = 0;
 
@@ -55,6 +56,8 @@ namespace esiaf_ros {
 
             void operator=(InputTopicData const &) = delete;  // delete the copy-assignment operator
 
+            void addVADcallback(boost::function<void()> callback_ptr);
+
         protected:
             void initialize_resampler();
 
@@ -62,6 +65,8 @@ namespace esiaf_ros {
             ros::Subscriber subscriber;
 
             boost::function<void(const std::vector<int8_t> &, const esiaf_ros::RecordingTimeStamps &)> userCallback;
+
+            boost::function<void()> vadCallback;
 
             void internal_subscriber_callback(const esiaf_ros::AugmentedAudio::ConstPtr &msg);
         };
@@ -79,11 +84,14 @@ namespace esiaf_ros {
 
             void publish(std::vector<int8_t> signal, esiaf_ros::RecordingTimeStamps timeStamps);
 
+            void setVADfinished();
+
         protected:
             void initialize_resampler();
 
         private:
             ros::Publisher publisher;
+            bool vadFinished;
         };
 
     }

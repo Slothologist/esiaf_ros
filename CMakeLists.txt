@@ -20,7 +20,7 @@ find_package(Boost REQUIRED)
 find_package(ALSA REQUIRED)
 
 find_library(SOXR NAMES soxr)
-if (NOT soxr_FOUND)
+if (NOT SOXR)
     message(FATAL_ERROR "soxr library not found")
 endif()
 

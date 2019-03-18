@@ -138,6 +138,24 @@ namespace esiaf_ros {
                  std::vector<int8_t> signal,
                  esiaf_ros::RecordingTimeStamps timeStamps);
 
+    /**
+     *
+     * @param esiafHandle
+     * @param topic
+     * @param callback
+     */
+    void add_vad_finished_callback(esiaf_handle* esiafHandle,
+                                   std::string topic,
+                                   boost::function<void()> callback);
+
+    /**
+     *
+     * @param esiafHandle
+     * @param topic
+     */
+    void set_vad_finished(esiaf_handle* esiafHandle,
+                          std::string topic);
+
 }// namespace
 
 #endif //ESIAF_LIBRARY_H
