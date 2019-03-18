@@ -77,6 +77,11 @@ namespace nodes {
          */
         std::thread playThread;
 
+        /**
+         *
+         */
+         int skippedFirstFrame;
+
     protected:
         //nothing
 

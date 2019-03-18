@@ -5,6 +5,7 @@
 //signal handler and threading
 #include <csignal>
 #include <thread>
+#include <chrono>
 
 // ros and esiaf imports
 #include "ros/ros.h"
@@ -20,6 +21,7 @@ namespace nodes {
 
     Player::Player(snd_pcm_t *playback_handle) :
             running(true),
+            skippedFirstFrame(0),
             playback_handle(playback_handle) {
         playThread = std::thread(&Player::playThreadMethod, this);
     }
@@ -31,6 +33,9 @@ namespace nodes {
 
     void Player::add_audio(int16_t *audio, size_t size) {
         mutex.lock();
+        if(skippedFirstFrame == 0 || skippedFirstFrame == 1){
+            skippedFirstFrame++;
+        }
 
         playlist.push(audio);
         playsize.push(size);
@@ -47,7 +52,13 @@ namespace nodes {
     void Player::playThreadMethod() {
 
         while (running) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
             mutex.lock();
+            if(skippedFirstFrame < 2){
+                mutex.unlock();
+                continue;
+            }
+
 
             if (!playlist.empty()) {
 
@@ -213,7 +224,7 @@ int main(int argc, char **argv) {
     simple_esiaf_callback = [&](const std::vector<int8_t> &signal,
                                 const esiaf_ros::RecordingTimeStamps &timeStamps) {
 
-        const int8_t *buf8 = signal.data();
+        const int8_t* buf8 = signal.data();
 
         int16_t buf16[signal.size() / 2];
         mempcpy(buf16, buf8, signal.size() * sizeof(int8_t));
