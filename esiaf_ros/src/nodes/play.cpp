@@ -225,11 +225,9 @@ int main(int argc, char **argv) {
                                 const esiaf_ros::RecordingTimeStamps &timeStamps) {
 
         const int8_t* buf8 = signal.data();
+        int16_t* buf16 = (int16_t*) buf8;
 
-        int16_t buf16[signal.size() / 2];
-        mempcpy(buf16, buf8, signal.size() * sizeof(int8_t));
-
-        player.add_audio(buf16, signal.size() / 2);
+        player.add_audio(buf16, signal.size()/2);
 
     };
 
