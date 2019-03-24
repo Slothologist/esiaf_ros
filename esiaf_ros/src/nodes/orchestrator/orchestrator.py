@@ -125,7 +125,10 @@ class Orchestrator:
     ####################################################################################
 
     def calculate_audio_tree_naive(self):
-        basic_format = AudioFormatInternal(8000, 7, 1, 1)
+        basic_format = AudioFormatInternal(AudioTopicFormatConstants.RATE_48000,
+                                           AudioTopicFormatConstants.BIT_INT_32_SIGNED,
+                                           1,
+                                           AudioTopicFormatConstants.LittleEndian)
 
         for node in self.active_nodes:
             rospy.loginfo("node in active nodes during calculation of audio tree \n" + str(node))

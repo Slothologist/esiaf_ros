@@ -72,7 +72,6 @@ class Node:
 
         config.outputTopics = []
         for topic in self.actualTopicsOut:
-            print('topic type: ' + str(type(topic[1])) + ', ' + str(topic))
             determinedConfig = esiaf_msg.AudioTopicInfo()
             determinedConfig.topic = topic[0]
             determinedConfig.allowedFormat = topic[1].to_ros()
