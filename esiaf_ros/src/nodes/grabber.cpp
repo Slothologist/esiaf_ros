@@ -183,7 +183,7 @@ int main(int argc, char **argv) {
 
                 // pack buffer into std::vector
                 int8_t *buf8 = (int8_t *) buffer;
-                std::vector<int8_t> signal(buf8, buf8 + 2 * buffersize);
+                std::vector<int8_t> signal(buf8, buf8 + buffersize * sizeof(int16_t));
 
                 // create a new thread to publish the captured audio and let it do its thing (detach)
                 std::thread publishThread(publish_audio, signal, begin, end);
