@@ -2,6 +2,10 @@
 // Created by rfeldhans on 02.11.18.
 //
 
+// std includes
+#include <sox.h>
+#include <stdexcept>
+
 // project includes
 #include "../include/esiaf_ros.h"
 #include "../include/topicData.h"

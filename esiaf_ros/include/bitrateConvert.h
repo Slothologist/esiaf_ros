@@ -14,8 +14,8 @@ namespace esiaf_ros {
 
         class Converter {
         public:
-            Converter(esiaf_ros::EsiafAudioFormat inputFormat,
-                      esiaf_ros::EsiafAudioFormat outputFormat);
+            Converter(esiaf_ros::Bitrate inputBitrate,
+                      esiaf_ros::Bitrate outputBitrate);
 
             void convert_bitrate_to_sox_sample_size(int8_t *framesIn,
                                                     size_t framesAmount,
@@ -30,11 +30,11 @@ namespace esiaf_ros {
                                  int8_t *framesOut);
 
         private:
-            esiaf_ros::EsiafAudioFormat inputFormat;
-            esiaf_ros::EsiafAudioFormat outputFormat;
+            esiaf_ros::Bitrate inputBitrate;
+            esiaf_ros::Bitrate outputBitrate;
         };
 
-        int bitrate_from_esiaf(esiaf_ros::Bitrate bitrate);
+        int byterate_from_esiaf(esiaf_ros::Bitrate bitrate);
 
     }
 }
