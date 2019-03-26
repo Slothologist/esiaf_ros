@@ -29,13 +29,13 @@ namespace esiaf_ros {
             act.channels = librarySideFormat.channels;
 
             this->librarySideFormat = act;
-
+            if (this->resampler) {
+                ROS_DEBUG("getting rid of resampler");
+                free(this->resampler);
+            }
             if (determine_resampling_necessary()) {
                 ROS_DEBUG("creating resampler");
                 initialize_resampler();
-            } else if (this->resampler != nullptr) {
-                ROS_DEBUG("getting rid of resampler");
-                free(this->resampler);
             }
         }
 
