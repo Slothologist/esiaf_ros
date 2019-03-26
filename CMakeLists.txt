@@ -19,9 +19,9 @@ find_package(Boost REQUIRED)
 
 find_package(ALSA REQUIRED)
 
-find_library(SOXR NAMES soxr)
-if (NOT SOXR)
-    message(FATAL_ERROR "soxr library not found")
+find_library(SOX NAMES sox)
+if (NOT SOX)
+    message(FATAL_ERROR "sox library not found")
 endif()
 
 ## Non-essential libraries:
@@ -188,7 +188,7 @@ add_dependencies(esiaf_ros ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED
 ## Specify libraries to link a library against
 target_link_libraries(esiaf_ros
         ${catkin_LIBRARIES}
-        soxr
+        sox
         )
 
 ## Specify libraries to link executables against

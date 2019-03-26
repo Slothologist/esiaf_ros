@@ -4,242 +4,145 @@
 
 
 #include "../include/resample.h"
+#include <sox.h>
 #include <stdexcept>
+#include <assert.h>
 
 namespace esiaf_ros {
     namespace resampling {
 
 
-        Resampler::Resampler(esiaf_ros::EsiafAudioFormat inputFormat, esiaf_ros::EsiafAudioFormat outputFormat) {
-            /*ROS_INFO("created resampler, which will resample from \n%d hz, %d bit, %d endian to\n%d hz, %d bit, %d endian",
-                     inputFormat.rate, inputFormat.bitrate, inputFormat.endian,
-                     outputFormat.rate, outputFormat.bitrate, outputFormat.endian);*/
-            if (inputFormat.channels != outputFormat.channels) {
-                std::string ex_text = "Different channel count is not supported for resampling yet";
-                throw std::invalid_argument(ex_text);
-            }
-            switch (inputFormat.rate) {
-                case esiaf_ros::Rate::RATE_8000:
-                    irate = 8000.;
-                    break;
-                case esiaf_ros::Rate::RATE_16000:
-                    irate = 16000.;
-                    break;
-                case esiaf_ros::Rate::RATE_32000:
-                    irate = 32000.;
-                    break;
-                case esiaf_ros::Rate::RATE_44100:
-                    irate = 44100.;
-                    break;
-                case esiaf_ros::Rate::RATE_48000:
-                    irate = 48000.;
-                    break;
-                case esiaf_ros::Rate::RATE_96000:
-                    irate = 96000.;
-                    break;
-                default:
-                    std::string ex_text = "input sample rate is not supported";
-                    throw std::invalid_argument(ex_text);
+        Resampler::Resampler(esiaf_ros::EsiafAudioFormat inputFormat, esiaf_ros::EsiafAudioFormat outputFormat) :
+                inputFormat(inputFormat),
+                outputFormat(outputFormat) {
+            ROS_INFO(
+                    "created resampler, which will resample from \n%d hz, %d bit, %d endian, %d channel to\n%d hz, %d bit, %d endian, %d channel",
+                    inputFormat.rate, inputFormat.bitrate, inputFormat.endian, inputFormat.channels,
+                    outputFormat.rate, outputFormat.bitrate, outputFormat.endian, outputFormat.channels);
 
-            }
-            switch (outputFormat.rate) {
-                case esiaf_ros::Rate::RATE_8000:
-                    orate = 8000.;
-                    break;
-                case esiaf_ros::Rate::RATE_16000:
-                    orate = 16000.;
-                    break;
-                case esiaf_ros::Rate::RATE_32000:
-                    orate = 32000.;
-                    break;
-                case esiaf_ros::Rate::RATE_44100:
-                    orate = 44100.;
-                    break;
-                case esiaf_ros::Rate::RATE_48000:
-                    orate = 48000.;
-                    break;
-                case esiaf_ros::Rate::RATE_96000:
-                    orate = 96000.;
-                    break;
-                default:
-                    std::string ex_text = "input sample rate is not supported";
-                    throw std::invalid_argument(ex_text);
-
-            }
-
-            soxr_error_t error;
-
-            soxr = soxr_create(
-                    irate, orate, inputFormat.channels,             /* Input rate, output rate, # of channels. */
-                    &error,                         /* To report any error during creation. */
-                    NULL,  // use defaults
-                    NULL,  // use defaults
-                    NULL); // use defaults
+            irate = sox_rate_from_esiaf(inputFormat.rate);
+            orate = sox_rate_from_esiaf(outputFormat.rate);
         }
 
         std::vector<int8_t> Resampler::resample(const std::vector<int8_t> &signal) {
-            // prepare input
-            size_t inputSize = signal.size();
-            int8_t *inBuf = (int8_t *) signal.data();
-            size_t *taken;
 
-            // change bitrate before resampling if bitrate get converted up
-            if (inputFormat.bitrate < outputFormat.bitrate) {
-                int8_t *bitChangedBuf = (int8_t *) malloc(inputSize * bitrate_from_esiaf(outputFormat.bitrate));
-                convert_bitrate(inBuf, inputSize, bitChangedBuf);
-                inBuf = bitChangedBuf;
-            }
+            int inputBitrate = bitrate_from_esiaf(inputFormat.bitrate);
+            int outputBitrate = bitrate_from_esiaf(outputFormat.bitrate);
 
-            //prepare output
-            auto outputSize = (size_t) ceil(inputSize * (orate / irate));
-            auto outBuf = (int8_t *) malloc(outputSize);
-            size_t *written;
+            // figure out buffer and buffersizes
+            internal_input_buffer_size = signal.size() * sizeof(int8_t);
+            internal_input_buffer = new int8_t[internal_input_buffer_size];
+            internal_output_buffer_size =
+                    (size_t) internal_input_buffer_size * (orate / irate) * (outputBitrate / inputBitrate) + 0.5;
+            internal_output_buffer = new int8_t[internal_output_buffer_size];
 
-            soxr_process(soxr, inBuf, inputSize, taken, outBuf, outputSize, written);
+            setup_sox_effect_chain();
 
-            // change bitrate after resampling if bitrate gets converted
-            if (inputFormat.bitrate > outputFormat.bitrate) {
-                int8_t *bitChangedBuf = (int8_t *) malloc(inputSize * bitrate_from_esiaf(outputFormat.bitrate));
-                convert_bitrate(outBuf, inputSize, bitChangedBuf);
-                free(outBuf);
-                outBuf = bitChangedBuf;
-            }
-
-            // tidy up the malloc from before
-            if (inputFormat.bitrate < outputFormat.bitrate) {
-                free(inBuf);
-            }
-
+            sox_flow_effects(chain, NULL, NULL);
             // change input signal vector to resampled result
-            std::vector<int8_t> newsignal(outBuf, outBuf + outputSize);
+            std::vector<int8_t> newsignal(internal_output_buffer, internal_output_buffer + internal_output_buffer_size);
+
+            // tidy up effect chain etc
+            sox_delete_effects_chain(chain);
+            sox_close(out);
+            sox_close(in);
+            free(internal_input_buffer);
+            free(internal_output_buffer);
+
             return newsignal;
         }
 
+        void Resampler::setup_sox_effect_chain() {
 
-        void Resampler::convert_bitrate_to_sox_sample_size(int8_t *framesIn,
-                                                           size_t framesAmount,
-                                                           sox_sample_t *framesOut) {
+            setup_sox_formats_from_esiaf();
+            sox_effect_t *e;
+            char *args[10];
+            chain = sox_create_effects_chain(&in->encoding, &out->encoding);
+            sox_signalinfo_t interm_signal = in->signal; /* NB: deep copy */
 
-            sox_sample_t sox_macro_temp_sample;
-            double sox_macro_temp_double;
-            size_t clips = 0;
+            //ROS_INFO("before effect adding");
 
-            for (int input = 0, output = 0; input < framesAmount; output++) {
-                switch (inputFormat.bitrate) {
-                    case esiaf_ros::Bitrate::BIT_INT_8_SIGNED:
-                        framesOut[output] = SOX_SIGNED_8BIT_TO_SAMPLE(framesIn[input], clips);
-                        input += 1;
-                        break;
-                    case esiaf_ros::Bitrate::BIT_INT_8_UNSIGNED:
-                        framesOut[output] = SOX_UNSIGNED_8BIT_TO_SAMPLE(framesIn[input], clips);
-                        input += 1;
-                        break;
-                    case esiaf_ros::Bitrate::BIT_INT_16_SIGNED:
-                        framesOut[output] = SOX_SIGNED_16BIT_TO_SAMPLE(framesIn[input], clips);
-                        input += 2;
-                        break;
-                    case esiaf_ros::Bitrate::BIT_INT_16_UNSIGNED:
-                        framesOut[output] = SOX_UNSIGNED_16BIT_TO_SAMPLE(framesIn[input], clips);
-                        input += 2;
-                        break;
-                    case esiaf_ros::Bitrate::BIT_INT_24_SIGNED:
-                        framesOut[output] = SOX_SIGNED_24BIT_TO_SAMPLE(framesIn[input], clips);
-                        input += 3;
-                        break;
-                    case esiaf_ros::Bitrate::BIT_INT_24_UNSIGNED:
-                        framesOut[output] = SOX_UNSIGNED_24BIT_TO_SAMPLE(framesIn[input], clips);
-                        input += 3;
-                        break;
-                    case esiaf_ros::Bitrate::BIT_INT_32_SIGNED:
-                        framesOut[output] = SOX_SIGNED_32BIT_TO_SAMPLE(framesIn[input], clips);
-                        input += 4;
-                        break;
-                    case esiaf_ros::Bitrate::BIT_INT_32_UNSIGNED:
-                        framesOut[output] = SOX_UNSIGNED_32BIT_TO_SAMPLE(framesIn[input], clips);
-                        input += 4;
-                        break;
-                    case esiaf_ros::Bitrate::BIT_FLOAT_32:
-                        framesOut[output] = SOX_FLOAT_32BIT_TO_SAMPLE(framesIn[input], clips);
-                        input += 4;
-                        break;
-                    case esiaf_ros::Bitrate::BIT_FLOAT_64:
-                        framesOut[output] = SOX_FLOAT_64BIT_TO_SAMPLE(framesIn[input], clips);
-                        input += 8;
-                        break;
-                    default:
-                        std::string ex_text = "bitrate is not supported";
-                        throw std::invalid_argument(ex_text);
-                }
+            e = sox_create_effect(sox_find_effect("input"));
+            args[0] = (char *) in, assert(sox_effect_options(e, 1, args) == SOX_SUCCESS);
+            assert(sox_add_effect(chain, e, &interm_signal, &in->signal) == SOX_SUCCESS);
+            free(e);
+
+            //ROS_INFO("after input adding");
+
+
+            if (in->signal.rate != out->signal.rate) {
+                e = sox_create_effect(sox_find_effect("rate"));
+                assert(sox_effect_options(e, 0, NULL) == SOX_SUCCESS);
+                assert(sox_add_effect(chain, e, &interm_signal, &out->signal) == SOX_SUCCESS);
+                free(e);
+                //ROS_INFO("after rate effect adding");
             }
+
+            if (in->signal.channels != out->signal.channels) {
+                e = sox_create_effect(sox_find_effect("channels"));
+                assert(sox_effect_options(e, 0, NULL) == SOX_SUCCESS);
+                assert(sox_add_effect(chain, e, &interm_signal, &out->signal) == SOX_SUCCESS);
+                free(e);
+                //ROS_INFO("after channel effect adding");
+            }
+
+            e = sox_create_effect(sox_find_effect("output"));
+            args[0] = (char *) out, assert(sox_effect_options(e, 1, args) == SOX_SUCCESS);
+            assert(sox_add_effect(chain, e, &interm_signal, &out->signal) == SOX_SUCCESS);
+            free(e);
+
+            //ROS_INFO("after output adding");
+        }
+
+
+        void Resampler::setup_sox_formats_from_esiaf() {
+            sox_signalinfo_t input_format = sox_signalinfo_from_esiaf(inputFormat);
+            sox_signalinfo_t output_format = sox_signalinfo_from_esiaf(outputFormat);
+            sox_encodinginfo_t input_encoding = sox_encodinginfo_from_esiaf(inputFormat);
+            sox_encodinginfo_t output_encoding = sox_encodinginfo_from_esiaf(outputFormat);
+            assert(in = sox_open_mem_read(internal_input_buffer, internal_input_buffer_size, &input_format, &input_encoding,
+                                          "raw"));
+            assert(out = sox_open_mem_write(internal_output_buffer, internal_output_buffer_size, &output_format, &output_encoding,
+                                            "raw", NULL));
 
         }
 
-        void Resampler::convert_bitrate_from_sox_sample_size(sox_sample_t *framesIn,
-                                                             size_t framesAmount,
-                                                             int8_t *framesOut) {
-
-            sox_sample_t sox_macro_temp_sample;
-            double sox_macro_temp_double;
-            size_t clips = 0;
-
-            for (int input = 0, output = 0; output < framesAmount; input++) {
-                switch (outputFormat.bitrate) {
-                    case esiaf_ros::Bitrate::BIT_INT_8_SIGNED:
-                        framesOut[output] = SOX_SAMPLE_TO_SIGNED_8BIT(framesIn[input], clips);
-                        output += 1;
-                        break;
-                    case esiaf_ros::Bitrate::BIT_INT_8_UNSIGNED:
-                        framesOut[output] = SOX_SAMPLE_TO_UNSIGNED_8BIT(framesIn[input], clips);
-                        output += 1;
-                        break;
-                    case esiaf_ros::Bitrate::BIT_INT_16_SIGNED:
-                        framesOut[output] = SOX_SAMPLE_TO_SIGNED_16BIT(framesIn[input], clips);
-                        output += 2;
-                        break;
-                    case esiaf_ros::Bitrate::BIT_INT_16_UNSIGNED:
-                        framesOut[output] = SOX_SAMPLE_TO_UNSIGNED_16BIT(framesIn[input], clips);
-                        output += 2;
-                        break;
-                    case esiaf_ros::Bitrate::BIT_INT_24_SIGNED:
-                        framesOut[output] = SOX_SAMPLE_TO_SIGNED_24BIT(framesIn[input], clips);
-                        output += 3;
-                        break;
-                    case esiaf_ros::Bitrate::BIT_INT_24_UNSIGNED:
-                        framesOut[output] = SOX_SAMPLE_TO_UNSIGNED_24BIT(framesIn[input], clips);
-                        output += 3;
-                        break;
-                    case esiaf_ros::Bitrate::BIT_INT_32_SIGNED:
-                        framesOut[output] = SOX_SAMPLE_TO_SIGNED_32BIT(framesIn[input], clips);
-                        output += 4;
-                        break;
-                    case esiaf_ros::Bitrate::BIT_INT_32_UNSIGNED:
-                        framesOut[output] = SOX_SAMPLE_TO_UNSIGNED_32BIT(framesIn[input], clips);
-                        output += 4;
-                        break;
-                    case esiaf_ros::Bitrate::BIT_FLOAT_32:
-                        framesOut[output] = SOX_SAMPLE_TO_FLOAT_32BIT(framesIn[input], clips);
-                        output += 4;
-                        break;
-                    case esiaf_ros::Bitrate::BIT_FLOAT_64:
-                        framesOut[output] = SOX_SAMPLE_TO_FLOAT_64BIT(framesIn[input], clips);
-                        output += 8;
-                        break;
-                    default:
-                        std::string ex_text = "bitrate is not supported";
-                        throw std::invalid_argument(ex_text);
-                }
+        sox_encodinginfo_t Resampler::sox_encodinginfo_from_esiaf(esiaf_ros::EsiafAudioFormat format) {
+            sox_encodinginfo_t encodinginfo;
+            encodinginfo.bits_per_sample = (unsigned int) bitrate_from_esiaf(format.bitrate);
+            switch (format.bitrate){
+                case esiaf_ros::Bitrate::BIT_INT_8_UNSIGNED:
+                case esiaf_ros::Bitrate::BIT_INT_16_UNSIGNED:
+                case esiaf_ros::Bitrate::BIT_INT_24_UNSIGNED:
+                case esiaf_ros::Bitrate::BIT_INT_32_UNSIGNED:
+                    encodinginfo.encoding = SOX_ENCODING_UNSIGNED;
+                    break;
+                case esiaf_ros::Bitrate::BIT_INT_8_SIGNED:
+                case esiaf_ros::Bitrate::BIT_INT_16_SIGNED:
+                case esiaf_ros::Bitrate::BIT_INT_24_SIGNED:
+                case esiaf_ros::Bitrate::BIT_INT_32_SIGNED:
+                    encodinginfo.encoding = SOX_ENCODING_SIGN2;
+                    break;
+                case esiaf_ros::Bitrate::BIT_FLOAT_32:
+                case esiaf_ros::Bitrate::BIT_FLOAT_64:
+                    encodinginfo.encoding = SOX_ENCODING_FLOAT;
+                    break;
+                default:
+                    char buff[100];
+                    snprintf(buff, sizeof(buff), "bitrate is not supported (%d)", (int) format.bitrate);
+                    std::string ex_text = buff;
+                    throw std::invalid_argument(ex_text);
             }
+            return encodinginfo;
         }
 
-        void Resampler::convert_bitrate(int8_t *framesIn,
-                                        size_t framesAmount,
-                                        int8_t *framesOut) {
-            // create buffer for intermediate buffer of type sox_sample_t
-            sox_sample_t intermediateBuf[framesAmount];
-
-            // do the actual conveting
-            convert_bitrate_to_sox_sample_size(framesIn, framesAmount, &intermediateBuf[0]);
-            convert_bitrate_from_sox_sample_size(&intermediateBuf[0], framesAmount, framesOut);
+        sox_signalinfo_t Resampler::sox_signalinfo_from_esiaf(esiaf_ros::EsiafAudioFormat format) {
+            sox_signalinfo_t signalinfo;
+            signalinfo.channels = format.channels > 0 ? (unsigned int) format.channels : 1;
+            signalinfo.precision = (unsigned int) bitrate_from_esiaf(format.bitrate);
+            signalinfo.length = SOX_UNSPEC;
+            signalinfo.rate = sox_rate_from_esiaf(format.rate);
+            return signalinfo;
         }
 
         int Resampler::bitrate_from_esiaf(esiaf_ros::Bitrate bitrate) {
@@ -260,7 +163,29 @@ namespace esiaf_ros {
                 case esiaf_ros::Bitrate::BIT_FLOAT_64:
                     return 64;
                 default:
-                    std::string ex_text = "bitrate is not supported";
+                    char buff[100];
+                    snprintf(buff, sizeof(buff), "bitrate is not supported (%d)", (int) bitrate);
+                    std::string ex_text = buff;
+                    throw std::invalid_argument(ex_text);
+            }
+        }
+
+        double Resampler::sox_rate_from_esiaf(esiaf_ros::Rate rate) {
+            switch (rate) {
+                case esiaf_ros::Rate::RATE_8000:
+                    return 8000.;
+                case esiaf_ros::Rate::RATE_16000:
+                    return 16000.;
+                case esiaf_ros::Rate::RATE_32000:
+                    return 32000.;
+                case esiaf_ros::Rate::RATE_44100:
+                    return 44100.;
+                case esiaf_ros::Rate::RATE_48000:
+                    return 48000.;
+                case esiaf_ros::Rate::RATE_96000:
+                    return 96000.;
+                default:
+                    std::string ex_text = "sample rate is not supported";
                     throw std::invalid_argument(ex_text);
             }
         }
