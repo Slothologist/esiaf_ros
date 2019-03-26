@@ -64,6 +64,8 @@ namespace esiaf_ros {
         esiafHandle->nodename = ros::this_node::getName();
         esiafHandle->nodedesignation = nodeDesignation;
 
+        // also initilize sox
+        assert(sox_init() == SOX_SUCCESS);
 
         boost::function<void(const esiaf_ros::ChangedConfig&)> config_change_function = [&](const esiaf_ros::ChangedConfig& msg){
             handle_changed_config(esiafHandle, msg);
@@ -162,6 +164,10 @@ namespace esiaf_ros {
             }
             return;
         }
+    }
+
+    void quit_esiaf(){
+        sox_quit();
     }
 
 }// namespace
