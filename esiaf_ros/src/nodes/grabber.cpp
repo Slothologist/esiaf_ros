@@ -200,6 +200,7 @@ int main(int argc, char **argv) {
 
     // close audio device
     snd_pcm_close(capture_handle);
+    esiaf_ros::quit_esiaf();
 
     return (0);
 }

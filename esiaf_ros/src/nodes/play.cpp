@@ -255,6 +255,7 @@ int main(int argc, char **argv) {
     ros::spin();
 
     snd_pcm_close(playback_handle);
+    esiaf_ros::quit_esiaf();
 
     return (0);
 }

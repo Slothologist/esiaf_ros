@@ -99,6 +99,7 @@ int main(int argc, char **argv) {
     ROS_INFO("Node ready!");
 
     ros::spin();
+    esiaf_ros::quit_esiaf();
 
 
     return (0);
