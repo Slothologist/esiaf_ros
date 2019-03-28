@@ -47,6 +47,10 @@ namespace nodes {
         running = false;
         playThread.join();
         snd_pcm_close(playback_handle); // takes forever, todo: investigate
+        /* done: waits for the snd_pcm_writei call to return, as asoundlib is not threadsafe.
+         * Possible fix would be to restructure the way alsa gets its data, by using non-blocking mode and poll()
+         * See also https://alsa-user.narkive.com/Oo1wvgt5/how-to-interrupt-a-blocking-call-to-snd-pcm-writei
+         */
     }
 
     void Player::playThreadMethod() {
@@ -227,7 +231,7 @@ int main(int argc, char **argv) {
         const int8_t* buf8 = signal.data();
         int16_t* buf16 = (int16_t*) buf8;
 
-        player.add_audio(buf16, signal.size()/2);
+        player.add_audio(buf16, signal.size() * (sizeof(int8_t)/ sizeof(int16_t) ));
 
     };
 
