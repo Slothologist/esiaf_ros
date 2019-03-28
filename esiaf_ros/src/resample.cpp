@@ -54,6 +54,7 @@ namespace esiaf_ros {
 
         void Resampler::setup_sox_effect_chain() {
 
+            //ROS_INFO("resampling!");
             setup_sox_formats_from_esiaf();
             sox_effect_t *e;
             char *args[10];
@@ -133,6 +134,11 @@ namespace esiaf_ros {
                     std::string ex_text = buff;
                     throw std::invalid_argument(ex_text);
             }
+            encodinginfo.compression = 1.0;
+            encodinginfo.opposite_endian = sox_false;
+            encodinginfo.reverse_bits = sox_option_default;
+            encodinginfo.reverse_bytes = sox_option_default;
+            encodinginfo.reverse_nibbles = sox_option_default;
             return encodinginfo;
         }
 
@@ -142,6 +148,7 @@ namespace esiaf_ros {
             signalinfo.precision = (unsigned int) bitrate_from_esiaf(format.bitrate);
             signalinfo.length = SOX_UNSPEC;
             signalinfo.rate = sox_rate_from_esiaf(format.rate);
+            signalinfo.mult = NULL;
             return signalinfo;
         }
 
