@@ -227,7 +227,7 @@ int main(int argc, char **argv) {
         const int8_t* buf8 = signal.data();
         int16_t* buf16 = (int16_t*) buf8;
 
-        player.add_audio(buf16, signal.size()/2);
+        player.add_audio(buf16, signal.size() / (sizeof(int16_t)/sizeof(int8_t)) );
 
     };
 
