@@ -6,11 +6,11 @@
 #include <csignal>
 #include <thread>
 
+#include <alsa/asoundlib.h>
 #include "ros/ros.h"
 #include <esiaf_ros.h>
 #include "esiaf_ros/RecordingTimeStamps.h"
 #include "nodes/utils.h"
-#include <alsa/asoundlib.h>
 
 // boost config read imports
 #include <boost/property_tree/ptree.hpp>
@@ -183,7 +183,7 @@ int main(int argc, char **argv) {
 
                 // pack buffer into std::vector
                 int8_t *buf8 = (int8_t *) buffer;
-                std::vector<int8_t> signal(buf8, buf8 + buffersize * sizeof(int16_t));
+                std::vector<int8_t> signal(buf8, buf8 + (buffersize * (sizeof(int16_t)/sizeof(int8_t))));
 
                 // create a new thread to publish the captured audio and let it do its thing (detach)
                 std::thread publishThread(publish_audio, signal, begin, end);
