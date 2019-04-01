@@ -27,14 +27,15 @@ namespace esiaf_ros {
             esiaf_ros::EsiafAudioFormat inputFormat;
             esiaf_ros::EsiafAudioFormat outputFormat;
 
-            esiaf_ros::converting::Converter converter_to_soxr_sample_size;
-            esiaf_ros::converting::Converter converter_from_soxr_sample_size;
+            esiaf_ros::converting::Converter converter;
 
             soxr_t soxr;
             double irate;
             double orate;
 
         };
+
+        double sox_rate_from_esiaf(esiaf_ros::Rate rate);
 
 
     }// namespace

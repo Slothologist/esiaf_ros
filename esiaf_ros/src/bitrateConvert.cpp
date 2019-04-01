@@ -9,126 +9,135 @@ namespace esiaf_ros {
         Converter::Converter(esiaf_ros::Bitrate inputBitrate, esiaf_ros::Bitrate outputBitrate) :
                 inputBitrate(inputBitrate),
                 outputBitrate(outputBitrate) {
-            ROS_INFO("create converter to convert from %d bit to %d bit", (int)inputBitrate, (int)outputBitrate);
+            ROS_INFO("create converter to convert from %d bit to %d bit", (int) inputBitrate, (int) outputBitrate);
         }
 
 
         void Converter::convert_bitrate_to_sox_sample_size(int8_t *framesIn,
                                                            size_t framesAmount,
                                                            sox_sample_t *framesOut) {
-            ROS_INFO("Converting bitrate taking place!");
-
+            long int i = framesAmount;
             SOX_SAMPLE_LOCALS;
-            size_t clips = 0;
-
-            // prepare pointer casts
-            int16_t* framesInCast_16 = (int16_t*) framesIn;
-            sox_uint24_t* framesInCast_24 = (sox_uint24_t*) framesIn;
-            int32_t* framesInCast_32 = (int32_t*) framesIn;
-            double* framesInCast_64 = (double*) framesIn;
-
-            for (int frame = 0; frame < framesAmount; frame++) {
-                switch (inputBitrate) {
-                    case esiaf_ros::Bitrate::BIT_INT_8_SIGNED:
-                        framesOut[frame] = SOX_SIGNED_8BIT_TO_SAMPLE(framesIn[frame],);
-                        break;
-                    case esiaf_ros::Bitrate::BIT_INT_8_UNSIGNED:
-                        framesOut[frame] = SOX_UNSIGNED_8BIT_TO_SAMPLE(framesIn[frame],);
-                        break;
-                    case esiaf_ros::Bitrate::BIT_INT_16_SIGNED:
-                        framesOut[frame] = SOX_SIGNED_16BIT_TO_SAMPLE(framesInCast_16[frame],);
-                        break;
-                    case esiaf_ros::Bitrate::BIT_INT_16_UNSIGNED:
-                        framesOut[frame] = SOX_UNSIGNED_16BIT_TO_SAMPLE(framesInCast_16[frame],);
-                        break;
-                    case esiaf_ros::Bitrate::BIT_INT_24_SIGNED:
-                        framesOut[frame] = SOX_SIGNED_24BIT_TO_SAMPLE(framesInCast_24[frame],);
-                        break;
-                    case esiaf_ros::Bitrate::BIT_INT_24_UNSIGNED:
-                        framesOut[frame] = SOX_UNSIGNED_24BIT_TO_SAMPLE(framesInCast_24[frame], );
-                        break;
-                    case esiaf_ros::Bitrate::BIT_INT_32_SIGNED:
-                        framesOut[frame] = SOX_SIGNED_32BIT_TO_SAMPLE(framesInCast_32[frame],);
-                        break;
-                    case esiaf_ros::Bitrate::BIT_INT_32_UNSIGNED:
-                        framesOut[frame] = SOX_UNSIGNED_32BIT_TO_SAMPLE(framesInCast_32[frame],);
-                        break;
-                    case esiaf_ros::Bitrate::BIT_FLOAT_32:
-                        framesOut[frame] = SOX_FLOAT_32BIT_TO_SAMPLE(framesInCast_32[frame], clips);
-                        break;
-                    case esiaf_ros::Bitrate::BIT_FLOAT_64:
-                        framesOut[frame] = SOX_FLOAT_64BIT_TO_SAMPLE(framesInCast_64[frame], clips);
-                        break;
-                    default:
-                        std::string ex_text = "bitrate is not supported";
-                        throw std::invalid_argument(ex_text);
+            switch (inputBitrate) {
+                case esiaf_ros::Bitrate::BIT_INT_8_UNSIGNED: {
+                    uint8_t *buf1 = (uint8_t *) framesIn;
+                    while (i--) *framesOut++ = SOX_UNSIGNED_8BIT_TO_SAMPLE(*buf1++,);
+                    break;
                 }
+                case esiaf_ros::Bitrate::BIT_INT_8_SIGNED: {
+                    int8_t *buf1 = (int8_t *) framesIn;
+                    while (i--) *framesOut++ = SOX_SIGNED_8BIT_TO_SAMPLE(*buf1++,);
+                    break;
+                }
+                case esiaf_ros::Bitrate::BIT_INT_16_UNSIGNED: {
+                    uint16_t *buf1 = (uint16_t *) framesIn;
+                    while (i--) *framesOut++ = SOX_UNSIGNED_16BIT_TO_SAMPLE(*buf1++,);
+                    break;
+                }
+                case esiaf_ros::Bitrate::BIT_INT_16_SIGNED: {
+                    int16_t *buf1 = (int16_t *) framesIn;
+                    while (i--) *framesOut++ = SOX_SIGNED_16BIT_TO_SAMPLE(*buf1++,);
+                    break;
+                }
+                case esiaf_ros::Bitrate::BIT_INT_24_UNSIGNED: {
+                    sox_uint24_t *buf1 = (sox_uint24_t *) framesIn;
+                    while (i--) *framesOut++ = SOX_UNSIGNED_24BIT_TO_SAMPLE(*buf1++,);
+                    break;
+                }
+                case esiaf_ros::Bitrate::BIT_INT_24_SIGNED: {
+                    sox_int24_t *buf1 = (sox_int24_t *) framesIn;
+                    while (i--) *framesOut++ = SOX_SIGNED_24BIT_TO_SAMPLE(*buf1++,);
+                    break;
+                }
+                case esiaf_ros::Bitrate::BIT_INT_32_UNSIGNED: {
+                    uint32_t *buf1 = (uint32_t *) framesIn;
+                    while (i--) *framesOut++ = SOX_UNSIGNED_32BIT_TO_SAMPLE(*buf1++,);
+                    break;
+                }
+                case esiaf_ros::Bitrate::BIT_INT_32_SIGNED: {
+                    int32_t *buf1 = (int32_t *) framesIn;
+                    while (i--) *framesOut++ = SOX_SIGNED_32BIT_TO_SAMPLE(*buf1++,);
+                    break;
+                }
+                case esiaf_ros::Bitrate::BIT_FLOAT_32: {
+                    float_t *buf1 = (float_t *) framesIn;
+                    int clips = 0;
+                    while (i--) *framesOut++ = SOX_FLOAT_32BIT_TO_SAMPLE(*buf1++, clips);
+                    break;
+                }
+                case esiaf_ros::Bitrate::BIT_FLOAT_64: {
+                    double_t *buf1 = (double_t *) framesIn;
+                    int clips = 0;
+                    while (i--) *framesOut++ = SOX_FLOAT_64BIT_TO_SAMPLE(*buf1++, clips);
+                    break;
+                }
+                default:
+                    std::string ex_text = "bitrate is not supported";
+                    throw std::invalid_argument(ex_text);
             }
-
         }
 
         void Converter::convert_bitrate_from_sox_sample_size(sox_sample_t *framesIn,
                                                              size_t framesAmount,
                                                              int8_t *framesOut) {
-
+            long int i = framesAmount;
             SOX_SAMPLE_LOCALS;
-            size_t clips = 0;
-
-            // prepare pointer casts
-            int16_t* framesOutCast_16 = (int16_t*) framesOut;
-            sox_uint24_t* framesOutCast_24 = (sox_uint24_t*) framesOut;
-            int32_t* framesOutCast_32 = (int32_t*) framesOut;
-            double* framesOutCast_64 = (double*) framesOut;
-
-            for (int frame = 0; frame < framesAmount; frame++) {
-                
-                switch (outputBitrate) {
-                    case esiaf_ros::Bitrate::BIT_INT_8_SIGNED:
-                        framesOut[frame] = SOX_SAMPLE_TO_SIGNED_8BIT(framesIn[frame], clips);
-                        break;
-                    case esiaf_ros::Bitrate::BIT_INT_8_UNSIGNED:
-                        framesOut[frame] = SOX_SAMPLE_TO_UNSIGNED_8BIT(framesIn[frame], clips);
-                        break;
-                    case esiaf_ros::Bitrate::BIT_INT_16_SIGNED:
-                        framesOutCast_16[frame] = SOX_SAMPLE_TO_SIGNED_16BIT(framesIn[frame], clips);
-                        break;
-                    case esiaf_ros::Bitrate::BIT_INT_16_UNSIGNED:
-                        framesOutCast_16[frame] = SOX_SAMPLE_TO_UNSIGNED_16BIT(framesIn[frame], clips);
-                        break;
-                    case esiaf_ros::Bitrate::BIT_INT_24_SIGNED:
-                        framesOutCast_24[frame] = SOX_SAMPLE_TO_SIGNED_24BIT(framesIn[frame], clips);
-                        break;
-                    case esiaf_ros::Bitrate::BIT_INT_24_UNSIGNED:
-                        framesOutCast_24[frame] = SOX_SAMPLE_TO_UNSIGNED_24BIT(framesIn[frame], clips);
-                        break;
-                    case esiaf_ros::Bitrate::BIT_INT_32_SIGNED:
-                        framesOutCast_32[frame] = SOX_SAMPLE_TO_SIGNED_32BIT(framesIn[frame], clips);
-                        break;
-                    case esiaf_ros::Bitrate::BIT_INT_32_UNSIGNED:
-                        framesOutCast_32[frame] = SOX_SAMPLE_TO_UNSIGNED_32BIT(framesIn[frame], clips);
-                        break;
-                    case esiaf_ros::Bitrate::BIT_FLOAT_32:
-                        framesOutCast_32[frame] = SOX_SAMPLE_TO_FLOAT_32BIT(framesIn[frame], clips);
-                        break;
-                    case esiaf_ros::Bitrate::BIT_FLOAT_64:
-                        framesOutCast_64[frame] = SOX_SAMPLE_TO_FLOAT_64BIT(framesIn[frame], clips);
-                        break;
-                    default:
-                        std::string ex_text = "bitrate is not supported";
-                        throw std::invalid_argument(ex_text);
+            int clips = 0;
+            switch (outputBitrate) {
+                case esiaf_ros::Bitrate::BIT_INT_8_UNSIGNED: {
+                    uint8_t *buf1 = (uint8_t *) framesOut;
+                    while (i--) *buf1++ = SOX_SAMPLE_TO_UNSIGNED_8BIT(*framesIn++, clips);
+                    break;
                 }
+                case esiaf_ros::Bitrate::BIT_INT_8_SIGNED: {
+                    int8_t *buf1 = (int8_t *) framesOut;
+                    while (i--) *buf1++ = SOX_SAMPLE_TO_SIGNED_8BIT(*framesIn++, clips);
+                    break;
+                }
+                case esiaf_ros::Bitrate::BIT_INT_16_UNSIGNED: {
+                    uint16_t *buf1 = (uint16_t *) framesOut;
+                    while (i--) *buf1++ = SOX_SAMPLE_TO_UNSIGNED_16BIT(*framesIn++, clips);
+                    break;
+                }
+                case esiaf_ros::Bitrate::BIT_INT_16_SIGNED: {
+                    int16_t *buf1 = (int16_t *) framesOut;
+                    while (i--) *buf1++ = SOX_SAMPLE_TO_SIGNED_16BIT(*framesIn++, clips);
+                    break;
+                }
+                case esiaf_ros::Bitrate::BIT_INT_24_UNSIGNED: {
+                    sox_uint24_t *buf1 = (sox_uint24_t *) framesOut;
+                    while (i--) *buf1++ = SOX_SAMPLE_TO_UNSIGNED_24BIT(*framesIn++, clips);
+                    break;
+                }
+                case esiaf_ros::Bitrate::BIT_INT_24_SIGNED: {
+                    sox_int24_t *buf1 = (sox_int24_t *) framesOut;
+                    while (i--) *buf1++ = SOX_SAMPLE_TO_SIGNED_24BIT(*framesIn++, clips);
+                    break;
+                }
+                case esiaf_ros::Bitrate::BIT_INT_32_UNSIGNED: {
+                    uint32_t *buf1 = (uint32_t *) framesOut;
+                    while (i--) *buf1++ = SOX_SAMPLE_TO_UNSIGNED_32BIT(*framesIn++, clips);
+                    break;
+                }
+                case esiaf_ros::Bitrate::BIT_INT_32_SIGNED: {
+                    int32_t *buf1 = (int32_t *) framesOut;
+                    while (i--) *buf1++ = SOX_SAMPLE_TO_SIGNED_32BIT(*framesIn++, clips);
+                    break;
+                }
+                case esiaf_ros::Bitrate::BIT_FLOAT_32: {
+                    float_t *buf1 = (float_t *) framesOut;
+                    while (i--) *buf1++ = SOX_SAMPLE_TO_FLOAT_32BIT(*framesIn++, clips);
+                    break;
+                }
+                case esiaf_ros::Bitrate::BIT_FLOAT_64: {
+                    int64_t *buf1 = (int64_t *) framesOut;
+                    while (i--) *buf1++ = SOX_SAMPLE_TO_FLOAT_64BIT(*framesIn++, clips);
+                    break;
+                }
+                default:
+                    std::string ex_text = "bitrate is not supported";
+                    throw std::invalid_argument(ex_text);
             }
-        }
-
-        void Converter::convert_bitrate(int8_t *framesIn,
-                                        size_t framesAmount,
-                                        int8_t *framesOut) {
-            // create buffer for intermediate buffer of type sox_sample_t
-            sox_sample_t intermediateBuf[framesAmount];
-
-            // do the actual conveting
-            convert_bitrate_to_sox_sample_size(framesIn, framesAmount, &intermediateBuf[0]);
-            convert_bitrate_from_sox_sample_size(&intermediateBuf[0], framesAmount, framesOut);
         }
 
         int byterate_from_esiaf(esiaf_ros::Bitrate bitrate) {
