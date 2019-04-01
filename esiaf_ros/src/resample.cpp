@@ -31,9 +31,11 @@ namespace esiaf_ros {
 
             // figure out buffer and buffersizes
             internal_input_buffer_size = signal.size() * sizeof(int8_t);
-            internal_input_buffer = new int8_t[internal_input_buffer_size];
-            internal_output_buffer_size =
-                    (size_t) internal_input_buffer_size * (orate / irate) * (outputBitrate / inputBitrate) + 0.5;
+            internal_input_buffer = new int8_t[signal.size()];
+            std::copy(signal.data(), signal.data() + signal.size() * sizeof(int8_t), internal_input_buffer);
+
+            double output_scaling_factor = (orate / irate) * ((double)outputBitrate / (double)inputBitrate);
+            internal_output_buffer_size =  (size_t)(((output_scaling_factor * signal.size())) + 0.5);
             internal_output_buffer = new int8_t[internal_output_buffer_size];
 
             setup_sox_effect_chain();
@@ -101,9 +103,11 @@ namespace esiaf_ros {
             sox_signalinfo_t output_format = sox_signalinfo_from_esiaf(outputFormat);
             sox_encodinginfo_t input_encoding = sox_encodinginfo_from_esiaf(inputFormat);
             sox_encodinginfo_t output_encoding = sox_encodinginfo_from_esiaf(outputFormat);
-            assert(in = sox_open_mem_read(internal_input_buffer, internal_input_buffer_size, &input_format, &input_encoding,
+            assert(in = sox_open_mem_read(internal_input_buffer, internal_input_buffer_size, &input_format,
+                                          &input_encoding,
                                           "raw"));
-            assert(out = sox_open_mem_write(internal_output_buffer, internal_output_buffer_size, &output_format, &output_encoding,
+            assert(out = sox_open_mem_write(internal_output_buffer, internal_output_buffer_size, &output_format,
+                                            &output_encoding,
                                             "raw", NULL));
 
         }
@@ -111,7 +115,7 @@ namespace esiaf_ros {
         sox_encodinginfo_t Resampler::sox_encodinginfo_from_esiaf(esiaf_ros::EsiafAudioFormat format) {
             sox_encodinginfo_t encodinginfo;
             encodinginfo.bits_per_sample = (unsigned int) bitrate_from_esiaf(format.bitrate);
-            switch (format.bitrate){
+            switch (format.bitrate) {
                 case esiaf_ros::Bitrate::BIT_INT_8_UNSIGNED:
                 case esiaf_ros::Bitrate::BIT_INT_16_UNSIGNED:
                 case esiaf_ros::Bitrate::BIT_INT_24_UNSIGNED:
