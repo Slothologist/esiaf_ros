@@ -36,15 +36,9 @@ namespace esiaf_ros {
             irate = sox_rate_from_esiaf(inputFormat.rate);
             orate = sox_rate_from_esiaf(outputFormat.rate);
 
-            soxr_error_t error;
 
             if (inputFormat.rate != outputFormat.rate) {
-                soxr = soxr_create(
-                        irate, orate, inputFormat.channels,             /* Input rate, output rate, # of channels. */
-                        &error,                         /* To report any error during creation. */
-                        NULL,  // use defaults
-                        NULL,  // use defaults
-                        NULL); // use defaults
+                setup_resampler();
                 ROS_INFO("resampler created which will resample from %dHz to %dHz", (int) inputFormat.rate,
                          (int) outputFormat.rate);
             } else {
@@ -164,6 +158,40 @@ namespace esiaf_ros {
                     std::string ex_text = "sample rate is not supported";
                     throw std::invalid_argument(ex_text);
             }
+        }
+
+        void Resampler::setup_resampler() {
+            soxr_error_t error;
+
+            soxr_io_spec_t io_spec;// use defaults
+            io_spec.itype=SOXR_INT32_I;
+            io_spec.otype= SOXR_INT32_I;
+            io_spec.scale = 1;
+            io_spec.e = 0;
+            io_spec.flags = 0;
+
+            soxr_quality_spec_t qual_spec;// use defaults
+            qual_spec.precision = 20;
+            qual_spec.phase_response =50;
+            qual_spec.passband_end = 0.913;
+            qual_spec.stopband_begin = 1;
+            qual_spec.e = 0;
+            qual_spec.flags = 0;
+
+            soxr_runtime_spec_t runtime_spec;// use defaults
+            runtime_spec.log2_min_dft_size = 10;
+            runtime_spec.log2_large_dft_size = 17;
+            runtime_spec.coef_size_kbytes = 400;
+            runtime_spec.num_threads = 1;
+            runtime_spec.flags = 0;
+            runtime_spec.e = 0;
+
+            soxr = soxr_create(
+                    irate, orate, inputFormat.channels,             /* Input rate, output rate, # of channels. */
+                    &error,                         /* To report any error during creation. */
+                    &io_spec,
+                    &qual_spec,
+                    &runtime_spec);
         }
 
     }// namespace

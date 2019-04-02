@@ -24,6 +24,8 @@ namespace esiaf_ros {
             std::vector<int8_t> resample(const std::vector<int8_t> &signal);
 
         private:
+            void setup_resampler();
+
             esiaf_ros::EsiafAudioFormat inputFormat;
             esiaf_ros::EsiafAudioFormat outputFormat;
 
