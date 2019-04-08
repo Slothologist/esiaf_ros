@@ -168,4 +168,8 @@ namespace esiaf_ros {
         }
     }
 
+    void quit_esiaf(esiaf_handle* esiafHandle){
+        delete esiafHandle;
+    }
+
 }// namespace

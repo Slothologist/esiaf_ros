@@ -156,6 +156,12 @@ namespace esiaf_ros {
     void set_vad_finished(esiaf_handle* esiafHandle,
                           std::string topic);
 
+    /**
+     *
+     * @param esiafHandle
+     */
+    void quit_esiaf(esiaf_handle* esiafHandle);
+
 }// namespace
 
 #endif //ESIAF_LIBRARY_H
