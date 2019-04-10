@@ -15,7 +15,9 @@ find_package(catkin REQUIRED
         std_msgs
         )
 
-find_package(Boost REQUIRED)
+find_package(Boost REQUIRED COMPONENTS python)
+find_package(PythonLibs 2.7 REQUIRED)
+find_package(PythonInterp)
 
 find_package(ALSA REQUIRED)
 
@@ -155,6 +157,8 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(
         ${catkin_INCLUDE_DIRS}
+        ${Boost_INCLUDE_DIRS}
+        ${PYTHON_INCLUDE_DIRS}
 )
 
 
@@ -174,6 +178,10 @@ add_library(esiaf_ros
         ${LIBSOURCES}
         )
 
+add_library(pyesiaf SHARED
+        esiaf_ros/src/python_bindings.cpp
+        )
+
 ## Declare C++ executables
 add_executable(esiaf_grabber esiaf_ros/src/nodes/grabber.cpp esiaf_ros/src/nodes/utils.cpp)
 add_executable(esiaf_record esiaf_ros/src/nodes/record.cpp esiaf_ros/src/nodes/utils.cpp)
@@ -188,7 +196,21 @@ add_dependencies(esiaf_ros ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED
 ## Specify libraries to link a library against
 target_link_libraries(esiaf_ros
         ${catkin_LIBRARIES}
+        ${Boost_LIBRARIES}
+        ${PYTHON_LIBRARIES}
         soxr
+        )
+
+set_target_properties(pyesiaf PROPERTIES
+        PREFIX ""
+        LIBRARY_OUTPUT_DIRECTORY ${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_PYTHON_DESTINATION}
+        )
+
+## Specify libraries to link a library against
+target_link_libraries(pyesiaf
+        ${catkin_LIBRARIES}
+        ${Boost_LIBRARIES}
+        esiaf_ros
         )
 
 ## Specify libraries to link executables against
@@ -239,6 +261,11 @@ install(TARGETS esiaf_ros
         ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
         LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
         RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION})
+
+install(TARGETS pyesiaf
+        ARCHIVE DESTINATION ${CATKIN_PACKAGE_PYTHON_DESTINATION}
+        LIBRARY DESTINATION ${CATKIN_PACKAGE_PYTHON_DESTINATION}
+        )
 
 ## Mark cpp header files for installation
 install(DIRECTORY ${PROJECT_NAME}/include/

@@ -18,11 +18,6 @@
 namespace esiaf_ros {
 
     /**
-     * A struct for the esiaf handle. Used primarily to make all methods stateless and reentrant.
-     */
-    struct esiaf_handle;
-
-    /**
      * An enum to determine what kind of node a specific node is.
      */
     enum class NodeDesignation{
@@ -88,6 +83,44 @@ namespace esiaf_ros {
     struct EsiafAudioTopicInfo {
         std::string topic;
         EsiafAudioFormat allowedFormat;
+    };
+
+    /**
+     * A struct for the esiaf handle. Used primarily to make all methods stateless and reentrant.
+     */
+    struct esiaf_handle;
+
+    class Esiaf_Handler {
+    public:
+
+        void initialize_esiaf(ros::NodeHandle *nodeHandle,
+                              NodeDesignation nodeDesignation);
+
+        void add_input_topic(EsiafAudioTopicInfo &input,
+                             boost::function<void(
+                                     const std::vector<int8_t>&,
+                                     const esiaf_ros::RecordingTimeStamps&)>
+                             callback);
+
+        void add_output_topic(EsiafAudioTopicInfo &output);
+
+        void start_esiaf();
+
+        void publish(std::string topic,
+                     std::vector<int8_t> signal,
+                     esiaf_ros::RecordingTimeStamps timeStamps);
+
+        void add_vad_finished_callback(std::string topic,
+                                       boost::function<void()> callback);
+
+        void set_vad_finished(std::string topic);
+
+        void quit_esiaf();
+
+
+    private:
+        esiaf_handle* handle;
+
     };
 
     /**

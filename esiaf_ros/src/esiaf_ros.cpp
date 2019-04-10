@@ -172,4 +172,108 @@ namespace esiaf_ros {
         delete esiafHandle;
     }
 
+    void Esiaf_Handler::initialize_esiaf(ros::NodeHandle *nodeHandle,
+                                         NodeDesignation nodeDesignation) {
+        // initialize basic stuff
+        esiaf_handle* esiafHandle = new esiaf_handle;
+        handle->ros_node_handle = nodeHandle;
+        handle->nodename = ros::this_node::getName();
+        handle->nodedesignation = nodeDesignation;
+
+
+        boost::function<void(const esiaf_ros::ChangedConfig&)> config_change_function = [&](const esiaf_ros::ChangedConfig& msg){
+            handle_changed_config(handle, msg);
+        };
+
+        // create registration publisher and config subscriber
+        handle->changeConfigSub = handle->ros_node_handle->subscribe<esiaf_ros::ChangedConfig>(
+                std::string("/esiaf_ros/") + handle->nodename + std::string("/changedConfig"),
+                1000,
+                config_change_function);
+        handle->registerService = handle->ros_node_handle->serviceClient<esiaf_ros::RegisterNode>("/esiaf_ros/orchestrator/register");
+    }
+
+    void Esiaf_Handler::add_input_topic(EsiafAudioTopicInfo &input,
+                                        boost::function<void(
+            const std::vector<int8_t> &,
+            const esiaf_ros::RecordingTimeStamps &)> callback) {
+        handle->inputs.emplace_back(handle->ros_node_handle, input, callback);
+    }
+
+    void Esiaf_Handler::add_output_topic(EsiafAudioTopicInfo &output) {
+        handle->outputs.emplace_back(handle->ros_node_handle, output);
+    }
+
+    void Esiaf_Handler::start_esiaf() {
+        ROS_DEBUG("esaif_lib: starting esiaf");
+        // create RegisterNode msg and publish it
+        esiaf_ros::RegisterNode registerNode;
+        registerNode.request.name = handle->nodename;
+        registerNode.request.designation = (char)handle->nodedesignation;
+        for(auto&& input : handle->inputs){// auto = InputTopicData
+            esiaf_ros::AudioTopicInfo info;
+            info.topic = input.getTopicName();
+
+            info.allowedFormat.rate = (int)input.getInfo().allowedFormat.rate;
+            info.allowedFormat.bitrate = (int)input.getInfo().allowedFormat.bitrate;
+            info.allowedFormat.channels = input.getInfo().allowedFormat.channels;
+            info.allowedFormat.endian = (int)input.getInfo().allowedFormat.endian;
+
+            registerNode.request.inputTopics.push_back(info);
+        }
+
+        for(auto&& output : handle->outputs){// auto = OutputTopicData
+            esiaf_ros::AudioTopicInfo info;
+            info.topic = output.getTopicName();
+
+            info.allowedFormat.rate = (int)output.getInfo().allowedFormat.rate;
+            info.allowedFormat.bitrate = (int)output.getInfo().allowedFormat.bitrate;
+            info.allowedFormat.channels = output.getInfo().allowedFormat.channels;
+            info.allowedFormat.endian = (int)output.getInfo().allowedFormat.endian;
+
+            registerNode.request.outputTopics.push_back(info);
+        }
+
+        ROS_DEBUG("esiaf_lib: publishing registernode");
+        ros::service::waitForService("/esiaf_ros/orchestrator/register", 15000);
+        if(!handle->registerService.call(registerNode)){
+            ROS_ERROR("esiaf_ros: Failed to register node!");
+        }
+    }
+
+    void Esiaf_Handler::publish(std::string topic,
+                                std::vector<int8_t> signal,
+                                esiaf_ros::RecordingTimeStamps timeStamps) {
+        for (auto&& outputTopic : handle->outputs) {// auto = OutputTopicData
+            if(outputTopic.getTopicName() == topic){
+                outputTopic.publish(signal, timeStamps);
+            }
+            return;
+        }
+        // raise exception when topic name could not be matched
+    }
+
+    void Esiaf_Handler::add_vad_finished_callback(std::string topic,
+                                                  boost::function<void()> callback) {
+        for (auto&& inputTopic : handle->inputs) {// auto = InputTopicData
+            if(inputTopic.getTopicName() == topic){
+                inputTopic.addVADcallback(callback);
+            }
+            return;
+        }
+    }
+
+    void Esiaf_Handler::set_vad_finished(std::string topic) {
+        for (auto&& outputTopic : handle->outputs) {// auto = OutputTopicData
+            if(outputTopic.getTopicName() == topic){
+                outputTopic.setVADfinished();
+            }
+            return;
+        }
+    }
+
+    void Esiaf_Handler::quit_esiaf() {
+        delete handle;
+    }
+
 }// namespace
