@@ -175,7 +175,7 @@ namespace esiaf_ros {
     void Esiaf_Handler::initialize_esiaf(ros::NodeHandle *nodeHandle,
                                          NodeDesignation nodeDesignation) {
         // initialize basic stuff
-        esiaf_handle* esiafHandle = new esiaf_handle;
+        handle = new esiaf_handle;
         handle->ros_node_handle = nodeHandle;
         handle->nodename = ros::this_node::getName();
         handle->nodedesignation = nodeDesignation;
