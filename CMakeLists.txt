@@ -179,7 +179,7 @@ add_library(esiaf_ros
         )
 
 add_library(pyesiaf SHARED
-        esiaf_ros/src/python_bindings.cpp
+        esiaf_ros/python/src/python_bindings.cpp
         )
 
 ## Declare C++ executables
@@ -203,7 +203,6 @@ target_link_libraries(esiaf_ros
 
 set_target_properties(pyesiaf PROPERTIES
         PREFIX ""
-        LIBRARY_OUTPUT_DIRECTORY ${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_PYTHON_DESTINATION}
         )
 
 ## Specify libraries to link a library against
@@ -264,7 +263,7 @@ install(TARGETS esiaf_ros
 
 install(TARGETS pyesiaf
         ARCHIVE DESTINATION ${CATKIN_PACKAGE_PYTHON_DESTINATION}
-        LIBRARY DESTINATION ${CATKIN_PACKAGE_PYTHON_DESTINATION}
+        LIBRARY DESTINATION "lib/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}/dist-packages"
         )
 
 ## Mark cpp header files for installation
@@ -281,19 +280,3 @@ install(DIRECTORY ${PROJECT_NAME}/launch
 install(DIRECTORY ${PROJECT_NAME}/config
         DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
         )
-
-CATKIN_INSTALL_PYTHON(PROGRAMS ${CMAKE_CURRENT_SOURCE_DIR}/esiaf_ros/scripts/start_orchestrator.py DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
-
-
-#############
-## Testing ##
-#############
-
-## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_openpose_ros.cpp)
-# if(TARGET ${PROJECT_NAME}-test)
-#   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
-# endif()
-
-## Add folders to be run by python nosetests
-# catkin_add_nosetests(test)

@@ -13,8 +13,8 @@ setup_args = generate_distutils_setup(
     license='---none---',
     install_requires=[
     ],
-    packages=['orchestrator'],
-    package_dir={'': 'esiaf_ros/src/nodes'}
+    packages=['pyesiaf'],
+    package_dir={'':'esiaf_ros/python'}
 )
 
 setup(**setup_args)
