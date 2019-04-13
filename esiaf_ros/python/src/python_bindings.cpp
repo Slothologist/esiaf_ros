@@ -5,6 +5,8 @@
 
 #include <string>
 #include <boost/python.hpp>
+#include <boost/numpy.hpp>
+#include <moveit/py_bindings_tools/serialize_msg.h>
 #include "ros/ros.h"
 #include "../../include/esiaf_ros.h"
 
@@ -18,7 +20,8 @@ namespace esiaf_ros {
     public:
         void initialize_wrapper(std::string nodeName,
                                 NodeDesignation nodeDesignation) {
-
+            Py_Initialize();
+            boost::numpy::initialize();
             int argc = 1;
             // we init ros with the name of the node, not the argv[0]. Lets see how well we are off with this.
             char* argv = (char*)nodeName.c_str();
@@ -27,6 +30,18 @@ namespace esiaf_ros {
             }
             ros::NodeHandle n;
             Esiaf_Handler::initialize_esiaf(&n, nodeDesignation);
+        }
+
+        void publish_wrapper(std::string topic,
+                             boost::numpy::ndarray signal,
+                             const std::string& timeStamps){
+            size_t size = signal.shape(0) * signal.get_dtype().get_itemsize();
+            int8_t * data = (int8_t*) signal.get_data();
+            std::vector<int8_t> signal_in_vec(data, data + size);
+
+            esiaf_ros::RecordingTimeStamps timeStamps_cpp;
+            moveit::py_bindings_tools::deserializeMsg(timeStamps, timeStamps_cpp);
+            publish(topic, signal_in_vec, timeStamps_cpp);
         }
     };
 }

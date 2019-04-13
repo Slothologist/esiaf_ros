@@ -13,11 +13,12 @@ find_package(catkin REQUIRED
         rosnode
         message_generation
         std_msgs
+        moveit_core
         )
 
 find_package(Boost REQUIRED COMPONENTS python)
 find_package(PythonLibs 2.7 REQUIRED)
-find_package(PythonInterp)
+find_package(PythonInterp REQUIRED)
 
 find_package(ALSA REQUIRED)
 
