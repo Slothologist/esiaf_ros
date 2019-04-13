@@ -1,3 +1,4 @@
+from setuptools import find_packages
 from distutils.core import setup
 from catkin_pkg.python_setup import generate_distutils_setup
 
@@ -10,6 +11,8 @@ setup_args = generate_distutils_setup(
     author='rfeldhans',
     author_email='rfeldhans@techfak.uni-bielefeld.de',
     license='---none---',
+    install_requires=[
+    ],
     packages=['pyesiaf'],
     package_dir={'':'esiaf_ros/python'}
 )
