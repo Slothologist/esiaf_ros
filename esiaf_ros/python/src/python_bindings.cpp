@@ -16,7 +16,7 @@ namespace esiaf_ros {
      * This class is necessary, because rospy.init() and ros::init() are distince from one another and rospy has no method
      * of obtaining the ros::NodeHandle necessary to initialize the EsiafHandler.
      */
-    class PyEsiaf_Handler : Esiaf_Handler {
+    class PyEsiaf_Handler : public Esiaf_Handler {
     public:
         void initialize_wrapper(std::string nodeName,
                                 NodeDesignation nodeDesignation) {
@@ -28,8 +28,8 @@ namespace esiaf_ros {
             if(!ros::isInitialized()) {
                 ros::init(argc, &argv, nodeName);
             }
-            ros::NodeHandle n;
-            Esiaf_Handler::initialize_esiaf(&n, nodeDesignation);
+            n = new ros::NodeHandle();
+            Esiaf_Handler::initialize_esiaf(n, nodeDesignation);
         }
 
         void publish_wrapper(std::string topic,
@@ -43,6 +43,14 @@ namespace esiaf_ros {
             moveit::py_bindings_tools::deserializeMsg(timeStamps, timeStamps_cpp);
             publish(topic, signal_in_vec, timeStamps_cpp);
         }
+
+        void quit_wrapper(){
+            delete n;
+            Esiaf_Handler::quit_esiaf();
+        }
+
+    private:
+        ros::NodeHandle* n;
     };
 }
 
@@ -50,6 +58,7 @@ namespace esiaf_ros {
 using namespace boost::python;
 
 BOOST_PYTHON_MODULE(pyesiaf){
+
         enum_<esiaf_ros::NodeDesignation>("NodeDesignation")
                 .value("VAD", esiaf_ros::NodeDesignation::VAD)
                 .value("SpeechRec", esiaf_ros::NodeDesignation::SpeechRec)
@@ -87,17 +96,6 @@ BOOST_PYTHON_MODULE(pyesiaf){
                 .value("BigEndian", esiaf_ros::Endian::BigEndian)
         ;
 
-        class_<esiaf_ros::PyEsiaf_Handler>("Esiaf_Handler")
-                .def("initialize_esiaf", &esiaf_ros::PyEsiaf_Handler::initialize_wrapper)
-                .def("start_esiaf", &esiaf_ros::Esiaf_Handler::start_esiaf)
-                .def("add_input_topic", &esiaf_ros::Esiaf_Handler::add_input_topic)
-                .def("add_output_topic", &esiaf_ros::Esiaf_Handler::add_output_topic)
-                .def("publish", &esiaf_ros::Esiaf_Handler::publish)
-                .def("add_vad_finished_callback", &esiaf_ros::Esiaf_Handler::add_vad_finished_callback)
-                .def("set_vad_finished", &esiaf_ros::Esiaf_Handler::set_vad_finished)
-                .def("quit_esiaf", &esiaf_ros::Esiaf_Handler::quit_esiaf)
-        ;
-
         class_<esiaf_ros::EsiafAudioFormat>("EsiafAudioFormat")
             .def_readwrite("rate", &esiaf_ros::EsiafAudioFormat::rate)
             .def_readwrite("bitrate", &esiaf_ros::EsiafAudioFormat::bitrate)
@@ -108,5 +106,16 @@ BOOST_PYTHON_MODULE(pyesiaf){
         class_<esiaf_ros::EsiafAudioTopicInfo>("EsiafAudioTopicInfo")
                 .def_readwrite("topic", &esiaf_ros::EsiafAudioTopicInfo::topic)
                 .def_readwrite("allowedFormat", &esiaf_ros::EsiafAudioTopicInfo::allowedFormat)
+        ;
+
+        class_<esiaf_ros::PyEsiaf_Handler>("Esiaf_Handler")
+        .def("initialize_esiaf", &esiaf_ros::PyEsiaf_Handler::initialize_wrapper)
+        .def("start_esiaf", &esiaf_ros::PyEsiaf_Handler::start_esiaf)
+        .def("quit_esiaf", &esiaf_ros::PyEsiaf_Handler::quit_wrapper)
+        .def("set_vad_finished", &esiaf_ros::PyEsiaf_Handler::set_vad_finished)
+        .def("add_output_topic", &esiaf_ros::PyEsiaf_Handler::add_output_topic)
+        .def("publish", &esiaf_ros::PyEsiaf_Handler::publish_wrapper)
+        .def("add_input_topic", &esiaf_ros::PyEsiaf_Handler::add_input_topic)
+        .def("add_vad_finished_callback", &esiaf_ros::PyEsiaf_Handler::add_vad_finished_callback)
         ;
 };
