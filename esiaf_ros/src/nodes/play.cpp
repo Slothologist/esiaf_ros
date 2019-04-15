@@ -203,7 +203,9 @@ int main(int argc, char **argv) {
 
     // initialise esiaf
     ROS_INFO("starting esiaf initialisation...");
-    esiaf_ros::esiaf_handle *eh = esiaf_ros::initialize_esiaf(&n, esiaf_ros::NodeDesignation::Other);
+    esiaf_ros::Esiaf_Handler handler;
+    handler.initialize_esiaf(&n, esiaf_ros::NodeDesignation::Other);
+    // was esiaf_ros::esiaf_handle *eh = esiaf_ros::initialize_esiaf(&n, esiaf_ros::NodeDesignation::Other);
 
     //create format for output topic
     esiaf_ros::EsiafAudioTopicInfo topicInfo;
@@ -231,12 +233,14 @@ int main(int argc, char **argv) {
 
     };
 
-    esiaf_ros::add_input_topic(eh, topicInfo, esiaf_handler);
+    handler.add_input_topic(topicInfo, esiaf_handler);
+    // was esiaf_ros::add_input_topic(eh, topicInfo, esiaf_handler);
 
     // start esiaf
     ROS_INFO("starting esiaf...");
 
-    esiaf_ros::start_esiaf(eh);
+    handler.start_esiaf();
+    // was esiaf_ros::start_esiaf(eh);
 
     //////////////////////////////////////////////////////
     // esiaf initialisation finished
