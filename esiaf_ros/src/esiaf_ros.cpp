@@ -3,7 +3,6 @@
 //
 
 // std includes
-#include <sox.h>
 #include <stdexcept>
 
 // project includes
