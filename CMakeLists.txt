@@ -20,7 +20,7 @@ set(BOOST_ROOT ${CMAKE_INSTALL_PREFIX})
 set(BOOST_INCLUDEDIR ${CMAKE_INSTALL_PREFIX}/include/boost)
 set(BOOST_LIBRARYDIR ${CMAKE_INSTALL_PREFIX}/lib)
 
-find_package(Boost 1.68.0 REQUIRED COMPONENTS python27 numpy27 QUIET)
+find_package(Boost 1.65.0 REQUIRED COMPONENTS python27 numpy27 QUIET)
 
 find_package(PythonLibs 2.7 REQUIRED)
 find_package(PythonInterp REQUIRED)
