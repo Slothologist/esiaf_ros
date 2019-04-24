@@ -5,9 +5,10 @@
 
 #include <string>
 #include <boost/python.hpp>
-#include <boost/numpy.hpp>
+#include <boost/python/numpy.hpp>
 #include <moveit/py_bindings_tools/serialize_msg.h>
 #include "ros/ros.h"
+#include "esiaf_ros/RecordingTimeStamps.h"
 #include "../../include/esiaf_ros.h"
 
 namespace esiaf_ros {
@@ -21,7 +22,7 @@ namespace esiaf_ros {
         void initialize_wrapper(std::string nodeName,
                                 NodeDesignation nodeDesignation) {
             Py_Initialize();
-            boost::numpy::initialize();
+            boost::python::numpy::initialize();
             int argc = 1;
             // we init ros with the name of the node, not the argv[0]. Lets see how well we are off with this.
             char* argv = (char*)nodeName.c_str();
@@ -33,7 +34,7 @@ namespace esiaf_ros {
         }
 
         void publish_wrapper(std::string topic,
-                             boost::numpy::ndarray signal,
+                             boost::python::numpy::ndarray signal,
                              const std::string& timeStamps){
             size_t size = signal.shape(0) * signal.get_dtype().get_itemsize();
             int8_t * data = (int8_t*) signal.get_data();

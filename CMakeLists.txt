@@ -165,6 +165,7 @@ include_directories(
         ${catkin_INCLUDE_DIRS}
         ${Boost_INCLUDE_DIRS}
         ${PYTHON_INCLUDE_DIRS}
+        ${PythonInterp_INCLUDE_DIRS}
 )
 
 
@@ -215,6 +216,8 @@ set_target_properties(pyesiaf PROPERTIES
 target_link_libraries(pyesiaf
         ${catkin_LIBRARIES}
         ${Boost_LIBRARIES}
+        ${PYTHON_LIBRARIES}
+        ${PythonInterp_LIBRARIES}
         esiaf_ros
         )
 
