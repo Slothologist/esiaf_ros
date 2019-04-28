@@ -10,16 +10,6 @@
 namespace esiaf_ros {
     namespace resampling {
 
-        void print_a_few_samples(sox_sample_t *pointy) {
-            std::string samples = "Samples: ";
-            for (int i = 0; i < 100; i++) {
-                samples.append(" %d,", (unsigned long) pointy[i]);
-            }
-
-            ROS_INFO(samples.c_str());
-        }
-
-
         Resampler::Resampler(esiaf_ros::EsiafAudioFormat inputFormat, esiaf_ros::EsiafAudioFormat outputFormat) :
                 inputFormat(inputFormat),
                 outputFormat(outputFormat),
