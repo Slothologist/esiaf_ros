@@ -127,9 +127,7 @@ int main(int argc, char **argv) {
     ROS_INFO("starting esiaf initialisation...");
 
     // initialise esiaf
-    esiaf_ros::Esiaf_Handler handler;
-    handler.initialize_esiaf(&n, esiaf_ros::NodeDesignation::Other);
-    // was esiaf_ros::esiaf_handle *eh = esiaf_ros::initialize_esiaf(&n, esiaf_ros::NodeDesignation::Other);
+    esiaf_ros::Esiaf_Handler handler(&n, esiaf_ros::NodeDesignation::Other);
     ROS_INFO("creating esiaf output topic...");
 
     //create format for output topic
@@ -147,12 +145,10 @@ int main(int argc, char **argv) {
     // notify esiaf about the output topic
     ROS_INFO("adding esiaf output topic...");
     handler.add_output_topic(topicInfo);
-    // was esiaf_ros::add_output_topic(eh, topicInfo);
 
     // start esiaf
     ROS_INFO("starting esiaf...");
     handler.start_esiaf();
-    // was esiaf_ros::start_esiaf(eh);
 
     //////////////////////////////////////////////////////
     // esiaf initialisation finished
@@ -170,7 +166,6 @@ int main(int argc, char **argv) {
 
         // publish everything
         handler.publish(topicname, signal, timeStamps);
-        // was esiaf_ros::publish(eh, topicname, signal, timeStamps);
     };
 
     // initialize timestamps for later publishing

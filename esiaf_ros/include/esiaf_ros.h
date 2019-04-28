@@ -93,8 +93,8 @@ namespace esiaf_ros {
     class Esiaf_Handler {
     public:
 
-        void initialize_esiaf(ros::NodeHandle *nodeHandle,
-                              NodeDesignation nodeDesignation);
+        Esiaf_Handler(ros::NodeHandle *nodeHandle,
+                      NodeDesignation nodeDesignation);
 
         void add_input_topic(EsiafAudioTopicInfo &input,
                              boost::function<void(

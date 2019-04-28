@@ -57,10 +57,9 @@ namespace esiaf_ros {
             }
         }
     }
-    
 
-    void Esiaf_Handler::initialize_esiaf(ros::NodeHandle *nodeHandle,
-                                         NodeDesignation nodeDesignation) {
+    Esiaf_Handler::Esiaf_Handler(ros::NodeHandle *nodeHandle,
+                                 NodeDesignation nodeDesignation) {
         // initialize basic stuff
         handle = new esiaf_handle;
         handle->ros_node_handle = nodeHandle;
