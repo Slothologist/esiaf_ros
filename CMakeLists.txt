@@ -13,14 +13,13 @@ find_package(catkin REQUIRED
         rosnode
         message_generation
         std_msgs
-        moveit_core
         )
 
 set(BOOST_ROOT ${CMAKE_INSTALL_PREFIX})
 set(BOOST_INCLUDEDIR ${CMAKE_INSTALL_PREFIX}/include/boost)
 set(BOOST_LIBRARYDIR ${CMAKE_INSTALL_PREFIX}/lib)
 
-find_package(Boost 1.65.0 REQUIRED COMPONENTS python27 numpy27 QUIET)
+find_package(Boost 1.65.0 REQUIRED COMPONENTS python27 numpy27 thread system QUIET)
 
 find_package(PythonLibs 2.7 REQUIRED)
 find_package(PythonInterp REQUIRED)
@@ -187,6 +186,7 @@ add_library(esiaf_ros
 
 add_library(pyesiaf SHARED
         esiaf_ros/python/src/python_bindings.cpp
+        esiaf_ros/python/src/roscpp_initializer.cpp
         )
 
 ## Declare C++ executables
