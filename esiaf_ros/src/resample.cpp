@@ -17,7 +17,7 @@ namespace esiaf_ros {
             /*ROS_INFO("created resampler, which will resample from \n%d hz, %d bit, %d endian to\n%d hz, %d bit, %d endian",
                      inputFormat.rate, inputFormat.bitrate, inputFormat.endian,
                      outputFormat.rate, outputFormat.bitrate, outputFormat.endian);*/
-            ROS_INFO("create resampler which will resample from %dHz to %dHz", (int) this->inputFormat.rate,
+            ROS_DEBUG("create resampler which will resample from %dHz to %dHz", (int) this->inputFormat.rate,
                      (int) this->outputFormat.rate);
             if (inputFormat.channels != outputFormat.channels) {
                 std::string ex_text = "Different channel count is not supported for resampling yet";
@@ -32,12 +32,12 @@ namespace esiaf_ros {
                 ROS_INFO("resampler created which will resample from %dHz to %dHz", (int) inputFormat.rate,
                          (int) outputFormat.rate);
             } else {
-                ROS_INFO("No resampler needed for same samplerate");
+                ROS_DEBUG("No resampler needed for same samplerate");
             }
         }
 
         std::vector<int8_t> Resampler::resample(const std::vector<int8_t> &signal) {
-            ROS_INFO("Resampling step taking place!");
+            ROS_DEBUG("Resampling step taking place!");
             // calculate sizes of various stages
             // first input
             size_t inputSizeInInt8 = signal.size();
@@ -58,26 +58,26 @@ namespace esiaf_ros {
             int8_t *outBuf; // neeeds to be malloc'd after written is actually determined
 
 
-            ROS_INFO("input size in int8: %ld", inputSizeInInt8);
-            ROS_INFO("input size in frames: %ld", inputFramesAmount);
-            ROS_INFO("input bitrate: %d", esiaf_ros::converting::byterate_from_esiaf(inputFormat.bitrate));
-            ROS_INFO("sizeof(int8_t): %ld", sizeof(int8_t));
-            ROS_INFO("irate: %f; orate: %f", irate, orate);
-            ROS_INFO("output size in frames: %ld", outputFramesAmount);
+            ROS_DEBUG("input size in int8: %ld", inputSizeInInt8);
+            ROS_DEBUG("input size in frames: %ld", inputFramesAmount);
+            ROS_DEBUG("input bitrate: %d", esiaf_ros::converting::byterate_from_esiaf(inputFormat.bitrate));
+            ROS_DEBUG("sizeof(int8_t): %ld", sizeof(int8_t));
+            ROS_DEBUG("irate: %f; orate: %f", irate, orate);
+            ROS_DEBUG("output size in frames: %ld", outputFramesAmount);
 
 
-            ROS_INFO("Most buffers allocated, pre bitrate converting 1");
+            ROS_DEBUG("Most buffers allocated, pre bitrate converting 1");
 
             // prepare input for resampling
             // change bitrate to soxr requested
             if (inputFormat.bitrate != soxr_bitrate) {
-                ROS_INFO("first convert");
+                ROS_DEBUG("first convert");
                 converter.convert_bitrate_to_sox_sample_size(inBuf, inputFramesAmount, resampleInputBuffer);
             } else {
                 resampleInputBuffer = (sox_sample_t *) inBuf;
             }
 
-            ROS_INFO("post bitrate converting 1, pre soxr resampling");
+            ROS_DEBUG("post bitrate converting 1, pre soxr resampling");
 
             if (irate != orate) {
                 soxr_process(soxr,
@@ -92,31 +92,31 @@ namespace esiaf_ros {
                 written = inputFramesAmount;
             }
 
-            ROS_INFO("resample complete, pre output buffer allocating");
+            ROS_DEBUG("resample complete, pre output buffer allocating");
 
             // now malloc the outBuffer
             size_t outBufSize = written * esiaf_ros::converting::byterate_from_esiaf(outputFormat.bitrate);
             outBuf = new int8_t[outBufSize];
 
-            ROS_INFO("post output buffer allocating, pre bitrate converting 2");
+            ROS_DEBUG("post output buffer allocating, pre bitrate converting 2");
 
-            ROS_INFO("written in frames: %ld", written);
+            ROS_DEBUG("written in frames: %ld", written);
 
             // prepare output for resampling
             // change bitrate from soxr requested to required
             if (outputFormat.bitrate != soxr_bitrate) {
-                ROS_INFO("second convert");
+                ROS_DEBUG("second convert");
                 converter.convert_bitrate_from_sox_sample_size(resampleOutputBuffer, written, outBuf);
             } else {
                 outBuf = (int8_t *) resampleInputBuffer;
             }
 
-            ROS_INFO("post bitrate converting 2, pre vector creation");
+            ROS_DEBUG("post bitrate converting 2, pre vector creation");
 
             // change input signal vector to resampled result
             std::vector<int8_t> newsignal(outBuf, outBuf + outBufSize);
 
-            ROS_INFO("output size in int8_t: %ld", newsignal.size());
+            ROS_DEBUG("output size in int8_t: %ld", newsignal.size());
 
             /**
              * In theory we would need these three deletes, to free the dynamically allocated memory inside this method.
@@ -126,7 +126,7 @@ namespace esiaf_ros {
              * delete[] outBuf;
              */
 
-            ROS_INFO("post vector creation");
+            ROS_DEBUG("post vector creation");
             return newsignal;
         }
 
