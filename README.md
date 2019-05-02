@@ -21,3 +21,9 @@ Scope, interfaces, messages, basic principles are still subject to change.
 - soxr (the SOX resample library)
 
 - a somewhat recent gcc
+
+- [Boost.NumPy](https://github.com/ndarray/Boost.NumPy) needs to be installed alongside the normal boost library.
+On ROS kinetic this typically means that you need to compile Boost.NumPy from source (as numpy was not merged till 1.63 and kinetic comes with boost 1.58).
+You will need to make sure that the numpy headers get installed to /usr/include instead of the default /usr/local/include.
+You can easily accomplish this by invoking cmake with -DCMAKE_INSTALL_PREFIX=/usr.
+However, the libboost_numpy.so may also need to be moved to the boost library directory.

@@ -2,21 +2,47 @@
 // Created by rfeldhans on 08.04.19.
 //
 
-
-#include <string>
-#include <boost/python.hpp>
-#include <boost/python/numpy.hpp>
+// ros and roscpp includes
 #include "../include/roscpp_initializer.h"
 #include "../include/serialize_msg.h"
 #include "ros/ros.h"
-#include "esiaf_ros/RecordingTimeStamps.h"
+
+// esiaf includes
 #include "../../include/esiaf_ros.h"
+#include "esiaf_ros/RecordingTimeStamps.h"
 
+// boost includes for ros bindings
+#include <boost/python.hpp>
+#include <boost/numpy.hpp>
 
+// std includes
+#include <string>
+
+// some namespaces to reduce obfuscation
 namespace bp = boost::python;
+namespace np = boost::numpy;
 namespace mp = moveit::py_bindings_tools;
 
 namespace esiaf_ros {
+
+    /**
+     * This class will wrap some functionality for the PyEsiaf_Handler which needs to happen between superclass
+     * Constructor calls.
+     */
+    class PyInit{
+    protected:
+        PyInit(std::string nodeName){
+            Py_Initialize();
+            np::initialize();
+            n = new ros::NodeHandle();
+        }
+
+        ~PyInit(){
+            delete n;
+        }
+
+        ros::NodeHandle* n;
+    };
 
     /**
      * This class is necessary, because rospy.init() and ros::init() are distince from one another and rospy has no method
@@ -24,26 +50,24 @@ namespace esiaf_ros {
      */
     class PyEsiaf_Handler :
             protected mp::ROScppInitializer,
-            public Esiaf_Handler {
+            protected PyInit,
+            public Esiaf_Handler
+    {
     public:
 
         PyEsiaf_Handler(std::string nodeName,
                         NodeDesignation nodeDesignation,
                         boost::python::list& arglist):
                 mp::ROScppInitializer(nodeName, arglist),
-                n(new ros::NodeHandle()),
-                Esiaf_Handler(n,nodeDesignation)
+                PyInit(nodeName),
+                Esiaf_Handler(n, nodeDesignation)
         {
         };
 
         void publish_wrapper(std::string topic,
-                             boost::python::numpy::ndarray signal,
+                             np::ndarray signal,
                              const std::string& timeStamps){
-            std::cout << "publish" << std::endl;
             size_t size = signal.shape(0) * signal.get_dtype().get_itemsize();
-            std::cout << "signal-shape: " << signal.shape(0) << std::endl;
-            std::cout << "itemsize: " << signal.get_dtype().get_itemsize() << std::endl;
-            std::cout << "arr-size: " << size << std::endl;
             int8_t * data = (int8_t*) signal.get_data();
             std::vector<int8_t> signal_in_vec(data, data + size);
 
@@ -53,12 +77,10 @@ namespace esiaf_ros {
         }
 
         void quit_wrapper(){
-            delete n;
             Esiaf_Handler::quit_esiaf();
         }
 
-    private:
-        ros::NodeHandle* n;
+        void operator=(PyEsiaf_Handler const &) = delete;  // delete the copy-assignment operator
     };
 }
 
