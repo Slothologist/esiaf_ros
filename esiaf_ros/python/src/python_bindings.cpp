@@ -5,6 +5,7 @@
 // ros and roscpp includes
 #include "../include/roscpp_initializer.h"
 #include "../include/serialize_msg.h"
+#include "../include/function_converter.h"
 #include "ros/ros.h"
 
 // esiaf includes
@@ -17,6 +18,8 @@
 
 // std includes
 #include <string>
+#include <functional>
+#include <sox.h>
 
 // some namespaces to reduce obfuscation
 namespace bp = boost::python;
@@ -78,6 +81,58 @@ namespace esiaf_ros {
 
         void quit_wrapper(){
             Esiaf_Handler::quit_esiaf();
+        }
+
+        void add_input_topic_wrapper(EsiafAudioTopicInfo &input,
+                          boost::function<void( np::ndarray, esiaf_ros::RecordingTimeStamps)> callback){
+
+            auto callback_fun = [&](const std::vector<int8_t>& audio,
+                                   const esiaf_ros::RecordingTimeStamps& recordingTimeStamps){
+                typedef int audiotype;
+                switch (input.allowedFormat.bitrate) {
+                    case esiaf_ros::Bitrate::BIT_INT_8_UNSIGNED: {
+                        typedef uint8_t audiotype;
+                    }
+                    case esiaf_ros::Bitrate::BIT_INT_8_SIGNED: {
+                        typedef int8_t audiotype;
+                    }
+                    case esiaf_ros::Bitrate::BIT_INT_16_UNSIGNED: {
+                        typedef uint16_t audiotype;
+                    }
+                    case esiaf_ros::Bitrate::BIT_INT_16_SIGNED: {
+                        typedef int16_t audiotype;
+                    }
+                    case esiaf_ros::Bitrate::BIT_INT_24_UNSIGNED: {
+                        typedef sox_uint24_t audiotype;
+                    }
+                    case esiaf_ros::Bitrate::BIT_INT_24_SIGNED: {
+                        typedef sox_int24_t audiotype;
+                    }
+                    case esiaf_ros::Bitrate::BIT_INT_32_UNSIGNED: {
+                        typedef uint32_t audiotype;
+                    }
+                    case esiaf_ros::Bitrate::BIT_INT_32_SIGNED: {
+                        typedef int32_t audiotype;
+                    }
+                    case esiaf_ros::Bitrate::BIT_FLOAT_32: {
+                        typedef float_t audiotype;
+                    }
+                    case esiaf_ros::Bitrate::BIT_FLOAT_64: {
+                        typedef double_t audiotype;
+                    }
+                    default:
+                        std::string ex_text = "bitrate is not supported";
+                        throw std::invalid_argument(ex_text);
+                }
+
+                bp::tuple shape = bp::make_tuple((sizeof(int8_t) / sizeof(audiotype)) * audio.size());
+                np::dtype dt = np::dtype::get_builtin<audiotype>();
+                np::ndarray ndarray = np::empty(shape, dt);
+
+                callback(ndarray, recordingTimeStamps);
+            };
+
+            Esiaf_Handler::add_input_topic(input, callback_fun);
         }
 
         void operator=(PyEsiaf_Handler const &) = delete;  // delete the copy-assignment operator
@@ -142,7 +197,12 @@ BOOST_PYTHON_MODULE(pyesiaf){
         .def("set_vad_finished", &esiaf_ros::PyEsiaf_Handler::set_vad_finished)
         .def("add_output_topic", &esiaf_ros::PyEsiaf_Handler::add_output_topic)
         .def("publish", &esiaf_ros::PyEsiaf_Handler::publish_wrapper)
-        .def("add_input_topic", &esiaf_ros::PyEsiaf_Handler::add_input_topic)
+        .def("add_input_topic", &esiaf_ros::PyEsiaf_Handler::add_input_topic_wrapper)
         .def("add_vad_finished_callback", &esiaf_ros::PyEsiaf_Handler::add_vad_finished_callback)
+        ;
+
+        esiaf_ros::function_converter()
+        .from_python<void(np::ndarray, esiaf_ros::RecordingTimeStamps)>()
+        .from_python<void()>()
         ;
 };
