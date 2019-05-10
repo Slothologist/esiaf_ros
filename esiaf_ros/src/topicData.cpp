@@ -133,7 +133,6 @@ namespace esiaf_ros {
             esiaf_ros::AugmentedAudio msg;
             msg.signal = signal_correctly_sampled;
             msg.time = timeStamps;
-            msg.channel = this->librarySideFormat.channels;
             msg.segmentmentation_ended = vadFinished;
             this->publisher.publish(msg);
             ROS_DEBUG("output topicdata publish complete");
