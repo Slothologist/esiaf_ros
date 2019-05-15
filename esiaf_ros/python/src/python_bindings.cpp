@@ -14,7 +14,12 @@
 
 // boost includes for ros bindings
 #include <boost/python.hpp>
-#include <boost/numpy.hpp>
+#include <boost/version.hpp>
+#if BOOST_VERSION < 106300
+    #include <boost/numpy.hpp>
+#else
+    #include <boost/python/numpy.hpp>
+#endif
 
 // std includes
 #include <string>
@@ -23,7 +28,12 @@
 
 // some namespaces to reduce obfuscation
 namespace bp = boost::python;
-namespace np = boost::numpy;
+#if BOOST_VERSION < 106300
+    namespace np = boost::numpy;
+#else
+    namespace np = boost::python::numpy;
+#endif
+
 namespace mp = moveit::py_bindings_tools;
 
 namespace esiaf_ros {
@@ -88,48 +98,78 @@ namespace esiaf_ros {
 
             auto callback_fun = [&](const std::vector<int8_t>& audio,
                                    const esiaf_ros::RecordingTimeStamps& recordingTimeStamps){
-                typedef int audiotype;
-                switch (input.allowedFormat.bitrate) {
+                ROS_INFO("got data callback!");
+                esiaf_ros::Bitrate info = esiaf_ros::Bitrate(input.allowedFormat.bitrate);
+                np::dtype d_type = np::dtype::get_builtin<int>();
+                size_t datatype_size;
+                switch (info) {
                     case esiaf_ros::Bitrate::BIT_INT_8_UNSIGNED: {
-                        typedef uint8_t audiotype;
+                        d_type = np::dtype::get_builtin<uint8_t>();
+                        datatype_size = sizeof(uint8_t);
+                        break;
                     }
                     case esiaf_ros::Bitrate::BIT_INT_8_SIGNED: {
-                        typedef int8_t audiotype;
+                        d_type = np::dtype::get_builtin<int8_t>();
+                        datatype_size = sizeof(int8_t);
+                        break;
                     }
                     case esiaf_ros::Bitrate::BIT_INT_16_UNSIGNED: {
-                        typedef uint16_t audiotype;
+                        d_type = np::dtype::get_builtin<uint16_t>();
+                        datatype_size = sizeof(uint16_t);
+                        break;
                     }
                     case esiaf_ros::Bitrate::BIT_INT_16_SIGNED: {
-                        typedef int16_t audiotype;
+                        d_type = np::dtype::get_builtin<int16_t>();
+                        datatype_size = sizeof(int16_t);
+                        break;
                     }
                     case esiaf_ros::Bitrate::BIT_INT_24_UNSIGNED: {
-                        typedef sox_uint24_t audiotype;
+                        d_type = np::dtype::get_builtin<sox_uint24_t>();
+                        datatype_size = sizeof(sox_uint24_t);
+                        break;
                     }
                     case esiaf_ros::Bitrate::BIT_INT_24_SIGNED: {
-                        typedef sox_int24_t audiotype;
+                        d_type = np::dtype::get_builtin<sox_int24_t>();
+                        datatype_size = sizeof(sox_int24_t);
+                        break;
                     }
                     case esiaf_ros::Bitrate::BIT_INT_32_UNSIGNED: {
-                        typedef uint32_t audiotype;
+                        d_type = np::dtype::get_builtin<uint32_t>();
+                        datatype_size = sizeof(uint32_t);
+                        break;
                     }
                     case esiaf_ros::Bitrate::BIT_INT_32_SIGNED: {
-                        typedef int32_t audiotype;
+                        d_type = np::dtype::get_builtin<int32_t>();
+                        datatype_size = sizeof(int32_t);
+                        break;
                     }
                     case esiaf_ros::Bitrate::BIT_FLOAT_32: {
-                        typedef float_t audiotype;
+                        d_type = np::dtype::get_builtin<float_t>();
+                        datatype_size = sizeof(float_t);
+                        break;
                     }
                     case esiaf_ros::Bitrate::BIT_FLOAT_64: {
-                        typedef double_t audiotype;
+                        d_type = np::dtype::get_builtin<double_t>();
+                        datatype_size = sizeof(double_t);
+                        break;
                     }
                     default:
-                        std::string ex_text = "bitrate is not supported";
+                        std::string ex_text = "Pyesiaf: Bitrate is not supported: " + std::to_string(int(info));
                         throw std::invalid_argument(ex_text);
                 }
 
-                bp::tuple shape = bp::make_tuple((sizeof(int8_t) / sizeof(audiotype)) * audio.size());
-                np::dtype dt = np::dtype::get_builtin<audiotype>();
-                np::ndarray ndarray = np::empty(shape, dt);
-
-                callback(ndarray, recordingTimeStamps);
+                ROS_INFO("dt prepared");
+                bp::tuple shape = bp::make_tuple((sizeof(int8_t) * audio.size()) / datatype_size);
+                ROS_INFO("shape created");
+                bp::tuple stride = bp::make_tuple(datatype_size);
+                ROS_INFO("stride created");
+                
+                bp::object own;
+                np::ndarray output = np::from_data(&audio[0], d_type, shape, stride, own);
+                ROS_INFO("output created");
+                np::ndarray output_array = output.copy();
+                ROS_INFO("before python callback");
+                callback(output_array, recordingTimeStamps);
             };
 
             Esiaf_Handler::add_input_topic(input, callback_fun);
