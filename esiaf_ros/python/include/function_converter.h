@@ -1,5 +1,5 @@
 //
-// Created by rfeldhans on 08.05.19.
+// Created by rfeldhans on 08.05.19. Taken from https://stackoverflow.com/a/16109416/8155003
 //
 
 #ifndef ESIAF_ROS_FUNCTION_CONVERTER_H
