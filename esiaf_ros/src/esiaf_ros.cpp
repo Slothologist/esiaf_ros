@@ -84,6 +84,7 @@ namespace esiaf_ros {
             const std::vector<int8_t> &,
             const esiaf_ros::RecordingTimeStamps &)> callback) {
         handle->inputs.emplace_back(handle->ros_node_handle, input, callback);
+        std::cout << "add_input_topic in esiaf handler cpp finished" << std::endl << std::flush;
     }
 
     void Esiaf_Handler::add_output_topic(EsiafAudioTopicInfo &output) {

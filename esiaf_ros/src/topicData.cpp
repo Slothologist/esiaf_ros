@@ -90,12 +90,14 @@ namespace esiaf_ros {
             } catch (const std::exception &e) {
                 ROS_INFO("%s", e.what());
             }
+            /* needs fixing, does not work at this point in time
             try {
                 if(msg->segmentmentation_ended && vadCallback != NULL)
                     vadCallback();
             } catch (const std::exception &e) {
                 ROS_INFO("%s", e.what());
             }
+            */
 
 
 
