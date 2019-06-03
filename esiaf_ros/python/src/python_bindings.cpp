@@ -58,8 +58,18 @@ namespace esiaf_ros {
         ros::NodeHandle *n;
     };
 
+    class python_gil
+    {
+    public:
+        python_gil()  { state_ = PyGILState_Ensure(); }
+        ~python_gil() { PyGILState_Release(state_);   }
+    private:
+        PyGILState_STATE state_;
+    };
+
+
     /**
-     * This class is necessary, because rospy.init() and ros::init() are distince from one another and rospy has no method
+     * This class is necessary, because rospy.init() and ros::init() are distinct from one another and rospy has no method
      * of obtaining the ros::NodeHandle necessary to initialize the EsiafHandler.
      */
     class PyEsiaf_Handler :
@@ -181,29 +191,17 @@ namespace esiaf_ros {
         void add_input_topic_wrapper(EsiafAudioTopicInfo &input,
                                      boost::function<void(np::ndarray, esiaf_ros::RecordingTimeStamps)> callback) {
 
-            //np::ndarray foo = np::zeros(bp::make_tuple(3, 3), np::dtype::get_builtin<double>());
-            //std::cout << "foo shape(0) not labda " << foo.shape(0) << std::endl << std::flush;
             auto callback_fun = [&](const std::vector <int8_t> &audio,
                                     const esiaf_ros::RecordingTimeStamps &recordingTimeStamps) {
-
-
-                //PyEval_AcquireLock();
-
-                PyInterpreterState * mainInterpreterState = mainThreadState->interp;
-                // create a thread state object for this thread
-                PyThreadState * myThreadState = PyThreadState_New(mainInterpreterState);
-
-
-                PyThreadState_Swap(myThreadState);
-                //ROS_INFO("numpy initialize finished");
+                python_gil lock;
 
                 np::ndarray output = convert_vec_to_ndarray(input, audio);
-
+                std::cout << "lambda output build" << std::endl << std::flush;
 
                 callback(output, recordingTimeStamps);
+
                 std::cout << "after python callback call" << std::endl << std::flush;
-                PyThreadState_Swap(NULL);
-                //PyEval_ReleaseLock();
+                //PyThreadState_Swap(NULL);
                 std::cout << "callback_fun finished" << std::endl << std::flush;
             };
 
