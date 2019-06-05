@@ -46,8 +46,6 @@ namespace esiaf_ros {
     class PyInit {
     protected:
         PyInit(std::string nodeName) {
-            Py_Initialize();
-            //np::initialize();
             n = new ros::NodeHandle();
         }
 
@@ -78,7 +76,6 @@ namespace esiaf_ros {
             public Esiaf_Handler {
     public:
 
-        PyThreadState *mainThreadState;
 
         PyEsiaf_Handler(std::string nodeName,
                         NodeDesignation nodeDesignation,
@@ -86,15 +83,6 @@ namespace esiaf_ros {
                 mp::ROScppInitializer(nodeName, arglist),
                 PyInit(nodeName),
                 Esiaf_Handler(n, nodeDesignation) {
-
-            Py_Initialize();
-            ROS_INFO("py init");
-            PyEval_InitThreads();
-            ROS_INFO("py threads");
-            mainThreadState = PyThreadState_Get();
-            ROS_INFO("py threadstate get");
-            //PyEval_ReleaseLock();
-            ROS_INFO("py lock released");
 
         };
 
@@ -174,38 +162,82 @@ namespace esiaf_ros {
                     throw std::invalid_argument(ex_text);
             }
 
-            ROS_INFO("dt prepared");
+            ROS_DEBUG("dt prepared");
             bp::tuple shape = bp::make_tuple((sizeof(int8_t) * audio.size()) / datatype_size);
-            ROS_INFO("shape created");
+            ROS_DEBUG("shape created");
             bp::tuple stride = bp::make_tuple(datatype_size);
-            ROS_INFO("stride created");
+            ROS_DEBUG("stride created");
 
             bp::object own;
-            ROS_INFO("own created");
+            ROS_DEBUG("own created");
             np::ndarray output = np::from_data(&audio[0], d_type, shape, stride, own);
-            ROS_INFO("output created");
+            ROS_DEBUG("output created");
             return output;
         }
 
 
         void add_input_topic_wrapper(EsiafAudioTopicInfo &input,
-                                     boost::function<void(np::ndarray, esiaf_ros::RecordingTimeStamps)> callback) {
+                                     bp::object callback){
+                                     //boost::function<void(np::ndarray, esiaf_ros::RecordingTimeStamps)> &callback) {
+
 
             auto callback_fun = [&](const std::vector <int8_t> &audio,
                                     const esiaf_ros::RecordingTimeStamps &recordingTimeStamps) {
                 python_gil lock;
 
                 np::ndarray output = convert_vec_to_ndarray(input, audio);
-                std::cout << "lambda output build" << std::endl << std::flush;
+                ROS_INFO("lambda output build");
+                std::string serialized_timeStamps = mp::serializeMsg(recordingTimeStamps);
 
-                callback(output, recordingTimeStamps);
+                try {
+                    bp::str d = bp::extract<bp::str>(callback.attr("__class__").attr("__name__"));
+                    std::string stringo = bp::extract<std::string>(d);
+                    ROS_INFO(stringo.c_str());
+                    callback(output, serialized_timeStamps);
+                    ROS_INFO("callback done");
+                } catch (const bp::error_already_set& ) {
+                    ROS_INFO("catch");
 
-                std::cout << "after python callback call" << std::endl << std::flush;
-                //PyThreadState_Swap(NULL);
-                std::cout << "callback_fun finished" << std::endl << std::flush;
+                    PyObject* error = PyErr_Occurred();
+                    bp::str d = bp::extract<bp::str>(callback.attr("__class__").attr("__name__"));
+                    std::string stringo = bp::extract<std::string>(d);
+                    ROS_INFO(stringo.c_str());
+
+                    //PyErr_Print();
+                    bp::object attributeError = bp::import("exceptions").attr("AttributeError");
+                    PyObject *e, *v, *t;
+                    PyErr_Fetch(&e, &v, &t);
+
+                    // A NULL e means that there is not available Python
+                    // exception
+                    if (!e){
+                        PyErr_Print();
+                        ROS_INFO("no e");
+                        return;
+                    }
+
+
+                    // We didn't do anything with the Python exception,
+                    // and we never took ownership of the refs, so it's
+                    // safe to simply pass them back to PyErr_Restore
+                    PyErr_Restore(e, v, t);
+                }
+
+
+                ROS_INFO("after python callback call");
             };
 
             Esiaf_Handler::add_input_topic(input, callback_fun);
+        }
+
+        void add_vad_finished_callback_wrapper(bp::str topic,
+                                      bp::object callback){
+            auto callback_fun = [&]() {
+                python_gil lock;
+
+                callback();
+            };
+            Esiaf_Handler::add_vad_finished_callback(bp::extract<std::string>(topic), callback_fun);
         }
 
         void operator=(PyEsiaf_Handler const &) = delete;  // delete the copy-assignment operator
@@ -215,6 +247,8 @@ namespace esiaf_ros {
 
 BOOST_PYTHON_MODULE(pyesiaf){
 
+        Py_Initialize();
+        PyEval_InitThreads();
         np::initialize();
 
         bp::enum_<esiaf_ros::NodeDesignation>("NodeDesignation")
@@ -273,11 +307,13 @@ BOOST_PYTHON_MODULE(pyesiaf){
                 .def("add_output_topic", &esiaf_ros::PyEsiaf_Handler::add_output_topic)
                 .def("publish", &esiaf_ros::PyEsiaf_Handler::publish_wrapper)
                 .def("add_input_topic", &esiaf_ros::PyEsiaf_Handler::add_input_topic_wrapper)
-                .def("add_vad_finished_callback", &esiaf_ros::PyEsiaf_Handler::add_vad_finished_callback)
+                .def("add_vad_finished_callback", &esiaf_ros::PyEsiaf_Handler::add_vad_finished_callback_wrapper)
         ;
 
+        /*
         esiaf_ros::function_converter()
                 .from_python<void(np::ndarray, esiaf_ros::RecordingTimeStamps)>()
-                .from_python<void()>()
+                //.from_python<void()>()
         ;
+         */
 };
