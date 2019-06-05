@@ -69,6 +69,12 @@ namespace esiaf_ros {
             boost::function<void()> vadCallback;
 
             void internal_subscriber_callback(const esiaf_ros::AugmentedAudio::ConstPtr &msg);
+
+            int last_id;
+
+            std::vector<esiaf_ros::AugmentedAudio::ConstPtr> out_of_order_msgs;
+
+            void call_client_callbacks(const esiaf_ros::AugmentedAudio::ConstPtr &msg);
         };
 
 
@@ -92,6 +98,7 @@ namespace esiaf_ros {
         private:
             ros::Publisher publisher;
             bool vadFinished;
+            int current_id;
         };
 
     }

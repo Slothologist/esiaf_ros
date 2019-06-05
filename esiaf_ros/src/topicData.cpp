@@ -64,7 +64,8 @@ namespace esiaf_ros {
                                        boost::function<void(const std::vector<int8_t> &,
                                                             const esiaf_ros::RecordingTimeStamps &)> callback_ptr) :
                 userCallback(callback_ptr),
-                vadCallback(NULL) {
+                vadCallback(NULL),
+                last_id(-1) {
             this->topic = topic;
             this->clientSideFormat = topic.allowedFormat;
             this->librarySideFormat = topic.allowedFormat;
@@ -73,6 +74,42 @@ namespace esiaf_ros {
         }
 
         void InputTopicData::internal_subscriber_callback(const esiaf_ros::AugmentedAudio::ConstPtr &msg) {
+            ROS_DEBUG("msg id: %d; last id: %d" , msg->id, last_id);
+
+            // check if the message is actually the next in line
+            if(last_id == -1 || last_id > msg->id) { // first message || first message from new/ other publisher
+                last_id = msg->id - 1;
+            }
+
+            if(msg->id > last_id+1){// message comes from the future
+                out_of_order_msgs.push_back(msg);
+                return;
+            }
+
+            // call the actual client callbacks
+            call_client_callbacks(msg);
+
+            // if we aquired out of order msgs, call the callback for these as well
+            bool out_of_order_msgs_present = false;
+            do{
+                for (auto it = out_of_order_msgs.begin(); it != out_of_order_msgs.end(); ) {
+                    if((*it)->id == last_id + 1){
+                        out_of_order_msgs_present = true;
+
+                        ROS_DEBUG("out of order msg coming through");
+                        // call client callback function
+                        call_client_callbacks(*it);
+
+                        // remove msg from vector
+                        it = out_of_order_msgs.erase(it);
+                    } else {
+                        ++it;
+                    }
+                }
+            } while (out_of_order_msgs_present);
+        }
+
+        void InputTopicData::call_client_callbacks(const esiaf_ros::AugmentedAudio::ConstPtr &msg){
             esiaf_ros::RecordingTimeStamps time = msg->time;
             std::vector<int8_t> signal = msg->signal;
             std::vector<int8_t> signal_correctly_sampled;
@@ -90,15 +127,15 @@ namespace esiaf_ros {
             } catch (const std::exception &e) {
                 ROS_INFO("%s", e.what());
             }
+            /*
             try {
                 if(msg->segmentmentation_ended && vadCallback != NULL)
                     vadCallback();
             } catch (const std::exception &e) {
                 ROS_INFO("%s", e.what());
             }
-
-
-
+            */
+            last_id++;
         }
 
         void InputTopicData::addVADcallback(boost::function<void()> callback_ptr) {
@@ -114,7 +151,8 @@ namespace esiaf_ros {
         /////////////////////////////////////////////////////////////////////////////////////
 
         OutputTopicData::OutputTopicData(ros::NodeHandle *nodeHandle, esiaf_ros::EsiafAudioTopicInfo topic) :
-                vadFinished(false) {
+                vadFinished(false),
+                current_id(1){
 
             this->topic = topic;
             this->librarySideFormat = topic.allowedFormat;
@@ -134,9 +172,11 @@ namespace esiaf_ros {
             msg.signal = signal_correctly_sampled;
             msg.time = timeStamps;
             msg.segmentmentation_ended = vadFinished;
+            msg.id = current_id;
             this->publisher.publish(msg);
             ROS_DEBUG("output topicdata publish complete");
             vadFinished = false;
+            current_id++;
         }
 
         void OutputTopicData::setVADfinished() {
