@@ -142,11 +142,11 @@ namespace esiaf_ros {
 
     void Esiaf_Handler::add_vad_finished_callback(std::string topic,
                                                   boost::function<void()> callback) {
+        return;
         for (auto&& inputTopic : handle->inputs) {// auto = InputTopicData
             if(inputTopic.getTopicName() == topic){
                 inputTopic.addVADcallback(callback);
             }
-            return;
         }
     }
 

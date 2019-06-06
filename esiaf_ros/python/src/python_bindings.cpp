@@ -27,7 +27,7 @@
 #include <functional>
 #include <sox.h>
 
-// some namespaces to reduce obfuscation
+// some namespaces and typedefs to reduce obfuscation
 namespace bp = boost::python;
 #if BOOST_VERSION < 106300
     namespace np = boost::numpy;
@@ -36,6 +36,8 @@ namespace bp = boost::python;
 #endif
 
 namespace mp = moveit::py_bindings_tools;
+
+typedef std::shared_ptr<bp::object> input_func_pointer;
 
 namespace esiaf_ros {
 
@@ -75,6 +77,8 @@ namespace esiaf_ros {
             protected PyInit,
             public Esiaf_Handler {
     public:
+        std::map<std::string, input_func_pointer> input_callbacks;
+        std::map<std::string, input_func_pointer> input_vad_callbacks;
 
 
         PyEsiaf_Handler(std::string nodeName,
@@ -178,32 +182,35 @@ namespace esiaf_ros {
 
         void add_input_topic_wrapper(EsiafAudioTopicInfo &input,
                                      bp::object callback){
-                                     //boost::function<void(np::ndarray, esiaf_ros::RecordingTimeStamps)> &callback) {
-
+            // save callback function. this is necessary because callback will get out of scope and not be
+            // available anymore in the lambda below
+            bp::object* callback_pointer = new bp::object(callback);
+            input_func_pointer pointy(callback_pointer);
+            input_callbacks[input.topic] = pointy;
 
             auto callback_fun = [&](const std::vector <int8_t> &audio,
                                     const esiaf_ros::RecordingTimeStamps &recordingTimeStamps) {
                 python_gil lock;
 
+                // convert both arguments to python types
                 np::ndarray output = convert_vec_to_ndarray(input, audio);
-                ROS_INFO("lambda output build");
+                ROS_DEBUG("lambda output build");
                 std::string serialized_timeStamps = mp::serializeMsg(recordingTimeStamps);
+                bp::str bp_timeStamps = bp::str(serialized_timeStamps);
 
                 try {
-                    bp::str d = bp::extract<bp::str>(callback.attr("__class__").attr("__name__"));
+                    // call python callback funtion
+                    auto callback_internal = input_callbacks[input.topic];
+                    bp::str d = bp::extract<bp::str>((*callback_internal).attr("__class__").attr("__name__"));
                     std::string stringo = bp::extract<std::string>(d);
-                    ROS_INFO(stringo.c_str());
-                    callback(output, serialized_timeStamps);
-                    ROS_INFO("callback done");
+                    ROS_DEBUG("class in callback function: %s",stringo.c_str());
+
+                    (*callback_internal)(output, bp_timeStamps);
+                    ROS_DEBUG("callback done");
                 } catch (const bp::error_already_set& ) {
-                    ROS_INFO("catch");
+                    ROS_INFO("error while calling callback function");
 
-                    PyObject* error = PyErr_Occurred();
-                    bp::str d = bp::extract<bp::str>(callback.attr("__class__").attr("__name__"));
-                    std::string stringo = bp::extract<std::string>(d);
-                    ROS_INFO(stringo.c_str());
-
-                    //PyErr_Print();
+                    PyErr_Print();
                     bp::object attributeError = bp::import("exceptions").attr("AttributeError");
                     PyObject *e, *v, *t;
                     PyErr_Fetch(&e, &v, &t);
@@ -222,9 +229,7 @@ namespace esiaf_ros {
                     // safe to simply pass them back to PyErr_Restore
                     PyErr_Restore(e, v, t);
                 }
-
-
-                ROS_INFO("after python callback call");
+                ROS_DEBUG("after python callback call");
             };
 
             Esiaf_Handler::add_input_topic(input, callback_fun);
@@ -232,10 +237,24 @@ namespace esiaf_ros {
 
         void add_vad_finished_callback_wrapper(bp::str topic,
                                       bp::object callback){
+            std::string topic_str =  bp::extract<std::string>(topic);
+            // save callback function. this is necessary because callback will get out of scope and not be
+            // available anymore in the lambda below
+            bp::object* callback_pointer = new bp::object(callback);
+            input_func_pointer pointy(callback_pointer);
+            input_vad_callbacks[topic_str] = pointy;
+
             auto callback_fun = [&]() {
                 python_gil lock;
 
-                callback();
+                // call python callback funtion
+                auto callback_internal = input_vad_callbacks[topic_str];
+                bp::str d = bp::extract<bp::str>((*callback_internal).attr("__class__").attr("__name__"));
+                std::string stringo = bp::extract<std::string>(d);
+                ROS_DEBUG("class in vad callback function: %s",stringo.c_str());
+
+                (*callback_internal)();
+                ROS_DEBUG("vad callback done");
             };
             Esiaf_Handler::add_vad_finished_callback(bp::extract<std::string>(topic), callback_fun);
         }
@@ -310,10 +329,10 @@ BOOST_PYTHON_MODULE(pyesiaf){
                 .def("add_vad_finished_callback", &esiaf_ros::PyEsiaf_Handler::add_vad_finished_callback_wrapper)
         ;
 
-        /*
+
         esiaf_ros::function_converter()
-                .from_python<void(np::ndarray, esiaf_ros::RecordingTimeStamps)>()
-                //.from_python<void()>()
+                .from_python<void(np::ndarray, bp::str)>()
+                .from_python<void()>()
         ;
-         */
+
 };
