@@ -15,6 +15,7 @@
 // boost includes for ros bindings
 #include <boost/python.hpp>
 #include <boost/version.hpp>
+
 #if BOOST_VERSION < 106300
     #include <boost/numpy.hpp>
 #else
@@ -26,7 +27,7 @@
 #include <functional>
 #include <sox.h>
 
-// some namespaces to reduce obfuscation
+// some namespaces and typedefs to reduce obfuscation
 namespace bp = boost::python;
 #if BOOST_VERSION < 106300
     namespace np = boost::numpy;
@@ -36,143 +37,226 @@ namespace bp = boost::python;
 
 namespace mp = moveit::py_bindings_tools;
 
+typedef std::shared_ptr<bp::object> input_func_pointer;
+
 namespace esiaf_ros {
 
     /**
      * This class will wrap some functionality for the PyEsiaf_Handler which needs to happen between superclass
      * Constructor calls.
      */
-    class PyInit{
+    class PyInit {
     protected:
-        PyInit(std::string nodeName){
-            Py_Initialize();
-            np::initialize();
+        PyInit(std::string nodeName) {
             n = new ros::NodeHandle();
         }
 
-        ~PyInit(){
+        ~PyInit() {
             delete n;
         }
 
-        ros::NodeHandle* n;
+        ros::NodeHandle *n;
     };
 
+    class python_gil
+    {
+    public:
+        python_gil()  { state_ = PyGILState_Ensure(); }
+        ~python_gil() { PyGILState_Release(state_);   }
+    private:
+        PyGILState_STATE state_;
+    };
+
+
     /**
-     * This class is necessary, because rospy.init() and ros::init() are distince from one another and rospy has no method
+     * This class is necessary, because rospy.init() and ros::init() are distinct from one another and rospy has no method
      * of obtaining the ros::NodeHandle necessary to initialize the EsiafHandler.
      */
     class PyEsiaf_Handler :
             protected mp::ROScppInitializer,
             protected PyInit,
-            public Esiaf_Handler
-    {
+            public Esiaf_Handler {
     public:
+        std::map<std::string, input_func_pointer> input_callbacks;
+        std::map<std::string, input_func_pointer> input_vad_callbacks;
+
 
         PyEsiaf_Handler(std::string nodeName,
                         NodeDesignation nodeDesignation,
-                        boost::python::list& arglist):
+                        boost::python::list &arglist) :
                 mp::ROScppInitializer(nodeName, arglist),
                 PyInit(nodeName),
-                Esiaf_Handler(n, nodeDesignation)
-        {
+                Esiaf_Handler(n, nodeDesignation) {
+
         };
 
         void publish_wrapper(std::string topic,
                              np::ndarray signal,
-                             const std::string& timeStamps){
+                             const std::string &timeStamps) {
             size_t size = signal.shape(0) * signal.get_dtype().get_itemsize();
-            int8_t * data = (int8_t*) signal.get_data();
-            std::vector<int8_t> signal_in_vec(data, data + size);
+            int8_t *data = (int8_t *) signal.get_data();
+            std::vector <int8_t> signal_in_vec(data, data + size);
 
             esiaf_ros::RecordingTimeStamps timeStamps_cpp;
             mp::deserializeMsg(timeStamps, timeStamps_cpp);
             Esiaf_Handler::publish(topic, signal_in_vec, timeStamps_cpp);
         }
 
-        void quit_wrapper(){
+        void quit_wrapper() {
             Esiaf_Handler::quit_esiaf();
         }
 
-        void add_input_topic_wrapper(EsiafAudioTopicInfo &input,
-                          boost::function<void( np::ndarray, esiaf_ros::RecordingTimeStamps)> callback){
-
-            auto callback_fun = [&](const std::vector<int8_t>& audio,
-                                   const esiaf_ros::RecordingTimeStamps& recordingTimeStamps){
-                ROS_INFO("got data callback!");
-                esiaf_ros::Bitrate info = esiaf_ros::Bitrate(input.allowedFormat.bitrate);
-                np::dtype d_type = np::dtype::get_builtin<int>();
-                size_t datatype_size;
-                switch (info) {
-                    case esiaf_ros::Bitrate::BIT_INT_8_UNSIGNED: {
-                        d_type = np::dtype::get_builtin<uint8_t>();
-                        datatype_size = sizeof(uint8_t);
-                        break;
-                    }
-                    case esiaf_ros::Bitrate::BIT_INT_8_SIGNED: {
-                        d_type = np::dtype::get_builtin<int8_t>();
-                        datatype_size = sizeof(int8_t);
-                        break;
-                    }
-                    case esiaf_ros::Bitrate::BIT_INT_16_UNSIGNED: {
-                        d_type = np::dtype::get_builtin<uint16_t>();
-                        datatype_size = sizeof(uint16_t);
-                        break;
-                    }
-                    case esiaf_ros::Bitrate::BIT_INT_16_SIGNED: {
-                        d_type = np::dtype::get_builtin<int16_t>();
-                        datatype_size = sizeof(int16_t);
-                        break;
-                    }
-                    case esiaf_ros::Bitrate::BIT_INT_24_UNSIGNED: {
-                        d_type = np::dtype::get_builtin<sox_uint24_t>();
-                        datatype_size = sizeof(sox_uint24_t);
-                        break;
-                    }
-                    case esiaf_ros::Bitrate::BIT_INT_24_SIGNED: {
-                        d_type = np::dtype::get_builtin<sox_int24_t>();
-                        datatype_size = sizeof(sox_int24_t);
-                        break;
-                    }
-                    case esiaf_ros::Bitrate::BIT_INT_32_UNSIGNED: {
-                        d_type = np::dtype::get_builtin<uint32_t>();
-                        datatype_size = sizeof(uint32_t);
-                        break;
-                    }
-                    case esiaf_ros::Bitrate::BIT_INT_32_SIGNED: {
-                        d_type = np::dtype::get_builtin<int32_t>();
-                        datatype_size = sizeof(int32_t);
-                        break;
-                    }
-                    case esiaf_ros::Bitrate::BIT_FLOAT_32: {
-                        d_type = np::dtype::get_builtin<float_t>();
-                        datatype_size = sizeof(float_t);
-                        break;
-                    }
-                    case esiaf_ros::Bitrate::BIT_FLOAT_64: {
-                        d_type = np::dtype::get_builtin<double_t>();
-                        datatype_size = sizeof(double_t);
-                        break;
-                    }
-                    default:
-                        std::string ex_text = "Pyesiaf: Bitrate is not supported: " + std::to_string(int(info));
-                        throw std::invalid_argument(ex_text);
+        static np::ndarray convert_vec_to_ndarray(EsiafAudioTopicInfo &input, const std::vector <int8_t> &audio) {
+            esiaf_ros::Bitrate info = esiaf_ros::Bitrate(input.allowedFormat.bitrate);
+            np::dtype d_type = np::dtype::get_builtin<int>();
+            size_t datatype_size;
+            switch (info) {
+                case esiaf_ros::Bitrate::BIT_INT_8_UNSIGNED: {
+                    d_type = np::dtype::get_builtin<uint8_t>();
+                    datatype_size = sizeof(uint8_t);
+                    break;
                 }
+                case esiaf_ros::Bitrate::BIT_INT_8_SIGNED: {
+                    d_type = np::dtype::get_builtin<int8_t>();
+                    datatype_size = sizeof(int8_t);
+                    break;
+                }
+                case esiaf_ros::Bitrate::BIT_INT_16_UNSIGNED: {
+                    d_type = np::dtype::get_builtin<uint16_t>();
+                    datatype_size = sizeof(uint16_t);
+                    break;
+                }
+                case esiaf_ros::Bitrate::BIT_INT_16_SIGNED: {
+                    d_type = np::dtype::get_builtin<int16_t>();
+                    datatype_size = sizeof(int16_t);
+                    break;
+                }
+                case esiaf_ros::Bitrate::BIT_INT_24_UNSIGNED: {
+                    d_type = np::dtype::get_builtin<sox_uint24_t>();
+                    datatype_size = sizeof(sox_uint24_t);
+                    break;
+                }
+                case esiaf_ros::Bitrate::BIT_INT_24_SIGNED: {
+                    d_type = np::dtype::get_builtin<sox_int24_t>();
+                    datatype_size = sizeof(sox_int24_t);
+                    break;
+                }
+                case esiaf_ros::Bitrate::BIT_INT_32_UNSIGNED: {
+                    d_type = np::dtype::get_builtin<uint32_t>();
+                    datatype_size = sizeof(uint32_t);
+                    break;
+                }
+                case esiaf_ros::Bitrate::BIT_INT_32_SIGNED: {
+                    d_type = np::dtype::get_builtin<int32_t>();
+                    datatype_size = sizeof(int32_t);
+                    break;
+                }
+                case esiaf_ros::Bitrate::BIT_FLOAT_32: {
+                    d_type = np::dtype::get_builtin<float_t>();
+                    datatype_size = sizeof(float_t);
+                    break;
+                }
+                case esiaf_ros::Bitrate::BIT_FLOAT_64: {
+                    d_type = np::dtype::get_builtin<double_t>();
+                    datatype_size = sizeof(double_t);
+                    break;
+                }
+                default:
+                    std::string ex_text = "Pyesiaf: Bitrate is not supported: " + std::to_string(int(info));
+                    throw std::invalid_argument(ex_text);
+            }
 
-                ROS_INFO("dt prepared");
-                bp::tuple shape = bp::make_tuple((sizeof(int8_t) * audio.size()) / datatype_size);
-                ROS_INFO("shape created");
-                bp::tuple stride = bp::make_tuple(datatype_size);
-                ROS_INFO("stride created");
-                
-                bp::object own;
-                np::ndarray output = np::from_data(&audio[0], d_type, shape, stride, own);
-                ROS_INFO("output created");
-                np::ndarray output_array = output.copy();
-                ROS_INFO("before python callback");
-                callback(output_array, recordingTimeStamps);
+            ROS_DEBUG("dt prepared");
+            bp::tuple shape = bp::make_tuple((sizeof(int8_t) * audio.size()) / datatype_size);
+            ROS_DEBUG("shape created");
+            bp::tuple stride = bp::make_tuple(datatype_size);
+            ROS_DEBUG("stride created");
+
+            bp::object own;
+            ROS_DEBUG("own created");
+            np::ndarray output = np::from_data(&audio[0], d_type, shape, stride, own);
+            ROS_DEBUG("output created");
+            return output;
+        }
+
+
+        void add_input_topic_wrapper(EsiafAudioTopicInfo &input,
+                                     bp::object callback){
+            // save callback function. this is necessary because callback will get out of scope and not be
+            // available anymore in the lambda below
+            bp::object* callback_pointer = new bp::object(callback);
+            input_func_pointer pointy(callback_pointer);
+            input_callbacks[input.topic] = pointy;
+
+            auto callback_fun = [&](const std::vector <int8_t> &audio,
+                                    const esiaf_ros::RecordingTimeStamps &recordingTimeStamps) {
+                python_gil lock;
+
+                // convert both arguments to python types
+                np::ndarray output = convert_vec_to_ndarray(input, audio);
+                ROS_DEBUG("lambda output build");
+                std::string serialized_timeStamps = mp::serializeMsg(recordingTimeStamps);
+                bp::str bp_timeStamps = bp::str(serialized_timeStamps);
+
+                try {
+                    // call python callback funtion
+                    auto callback_internal = input_callbacks[input.topic];
+                    bp::str d = bp::extract<bp::str>((*callback_internal).attr("__class__").attr("__name__"));
+                    std::string stringo = bp::extract<std::string>(d);
+                    ROS_DEBUG("class in callback function: %s",stringo.c_str());
+
+                    (*callback_internal)(output, bp_timeStamps);
+                    ROS_DEBUG("callback done");
+                } catch (const bp::error_already_set& ) {
+                    ROS_INFO("error while calling callback function");
+
+                    PyErr_Print();
+                    bp::object attributeError = bp::import("exceptions").attr("AttributeError");
+                    PyObject *e, *v, *t;
+                    PyErr_Fetch(&e, &v, &t);
+
+                    // A NULL e means that there is not available Python
+                    // exception
+                    if (!e){
+                        PyErr_Print();
+                        ROS_INFO("no e");
+                        return;
+                    }
+
+
+                    // We didn't do anything with the Python exception,
+                    // and we never took ownership of the refs, so it's
+                    // safe to simply pass them back to PyErr_Restore
+                    PyErr_Restore(e, v, t);
+                }
+                ROS_DEBUG("after python callback call");
             };
 
             Esiaf_Handler::add_input_topic(input, callback_fun);
+        }
+
+        void add_vad_finished_callback_wrapper(bp::str topic,
+                                      bp::object callback){
+            std::string topic_str =  bp::extract<std::string>(topic);
+            // save callback function. this is necessary because callback will get out of scope and not be
+            // available anymore in the lambda below
+            bp::object* callback_pointer = new bp::object(callback);
+            input_func_pointer pointy(callback_pointer);
+            input_vad_callbacks[topic_str] = pointy;
+
+            auto callback_fun = [&]() {
+                python_gil lock;
+
+                // call python callback funtion
+                auto callback_internal = input_vad_callbacks[topic_str];
+                bp::str d = bp::extract<bp::str>((*callback_internal).attr("__class__").attr("__name__"));
+                std::string stringo = bp::extract<std::string>(d);
+                ROS_DEBUG("class in vad callback function: %s",stringo.c_str());
+
+                (*callback_internal)();
+                ROS_DEBUG("vad callback done");
+            };
+            Esiaf_Handler::add_vad_finished_callback(bp::extract<std::string>(topic), callback_fun);
         }
 
         void operator=(PyEsiaf_Handler const &) = delete;  // delete the copy-assignment operator
@@ -181,6 +265,10 @@ namespace esiaf_ros {
 
 
 BOOST_PYTHON_MODULE(pyesiaf){
+
+        Py_Initialize();
+        PyEval_InitThreads();
+        np::initialize();
 
         bp::enum_<esiaf_ros::NodeDesignation>("NodeDesignation")
                 .value("VAD", esiaf_ros::NodeDesignation::VAD)
@@ -220,10 +308,10 @@ BOOST_PYTHON_MODULE(pyesiaf){
         ;
 
         bp::class_<esiaf_ros::EsiafAudioFormat>("EsiafAudioFormat")
-            .def_readwrite("rate", &esiaf_ros::EsiafAudioFormat::rate)
-            .def_readwrite("bitrate", &esiaf_ros::EsiafAudioFormat::bitrate)
-            .def_readwrite("channels", &esiaf_ros::EsiafAudioFormat::channels)
-            .def_readwrite("endian", &esiaf_ros::EsiafAudioFormat::endian)
+                .def_readwrite("rate", &esiaf_ros::EsiafAudioFormat::rate)
+                .def_readwrite("bitrate", &esiaf_ros::EsiafAudioFormat::bitrate)
+                .def_readwrite("channels", &esiaf_ros::EsiafAudioFormat::channels)
+                .def_readwrite("endian", &esiaf_ros::EsiafAudioFormat::endian)
         ;
 
         bp::class_<esiaf_ros::EsiafAudioTopicInfo>("EsiafAudioTopicInfo")
@@ -232,17 +320,19 @@ BOOST_PYTHON_MODULE(pyesiaf){
         ;
 
         bp::class_<esiaf_ros::PyEsiaf_Handler>("Esiaf_Handler", bp::init<std::string, esiaf_ros::NodeDesignation, bp::list&>())
-        .def("start_esiaf", &esiaf_ros::PyEsiaf_Handler::start_esiaf)
-        .def("quit_esiaf", &esiaf_ros::PyEsiaf_Handler::quit_wrapper)
-        .def("set_vad_finished", &esiaf_ros::PyEsiaf_Handler::set_vad_finished)
-        .def("add_output_topic", &esiaf_ros::PyEsiaf_Handler::add_output_topic)
-        .def("publish", &esiaf_ros::PyEsiaf_Handler::publish_wrapper)
-        .def("add_input_topic", &esiaf_ros::PyEsiaf_Handler::add_input_topic_wrapper)
-        .def("add_vad_finished_callback", &esiaf_ros::PyEsiaf_Handler::add_vad_finished_callback)
+                .def("start_esiaf", &esiaf_ros::PyEsiaf_Handler::start_esiaf)
+                .def("quit_esiaf", &esiaf_ros::PyEsiaf_Handler::quit_wrapper)
+                .def("set_vad_finished", &esiaf_ros::PyEsiaf_Handler::set_vad_finished)
+                .def("add_output_topic", &esiaf_ros::PyEsiaf_Handler::add_output_topic)
+                .def("publish", &esiaf_ros::PyEsiaf_Handler::publish_wrapper)
+                .def("add_input_topic", &esiaf_ros::PyEsiaf_Handler::add_input_topic_wrapper)
+                .def("add_vad_finished_callback", &esiaf_ros::PyEsiaf_Handler::add_vad_finished_callback_wrapper)
         ;
 
+
         esiaf_ros::function_converter()
-        .from_python<void(np::ndarray, esiaf_ros::RecordingTimeStamps)>()
-        .from_python<void()>()
+                .from_python<void(np::ndarray, bp::str)>()
+                .from_python<void()>()
         ;
+
 };
