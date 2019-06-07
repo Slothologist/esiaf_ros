@@ -68,6 +68,8 @@ namespace esiaf_ros {
 
             boost::function<void()> vadCallback;
 
+            bool vadCallback_set;
+
             void internal_subscriber_callback(const esiaf_ros::AugmentedAudio::ConstPtr &msg);
 
             int last_id;

@@ -64,7 +64,7 @@ namespace esiaf_ros {
                                        boost::function<void(const std::vector<int8_t> &,
                                                             const esiaf_ros::RecordingTimeStamps &)> callback_ptr) :
                 userCallback(callback_ptr),
-                vadCallback(NULL),
+                vadCallback_set(false),
                 last_id(-1) {
             this->topic = topic;
             this->clientSideFormat = topic.allowedFormat;
@@ -127,19 +127,22 @@ namespace esiaf_ros {
             } catch (const std::exception &e) {
                 ROS_INFO("%s", e.what());
             }
-            /* needs fixing, does not work at this point in time
+
             try {
-                if(msg->segmentmentation_ended && vadCallback != NULL)
+                if(msg->segmentmentation_ended && vadCallback_set) {
+                    ROS_INFO("checking vad");
                     vadCallback();
+                }
             } catch (const std::exception &e) {
                 ROS_INFO("%s", e.what());
             }
-            */
             last_id++;
         }
 
         void InputTopicData::addVADcallback(boost::function<void()> callback_ptr) {
+            ROS_INFO("adding vad callback");
             vadCallback = callback_ptr;
+            vadCallback_set = true;
         }
 
         void InputTopicData::initialize_resampler() {
