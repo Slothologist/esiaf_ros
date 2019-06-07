@@ -184,8 +184,7 @@ namespace esiaf_ros {
                                      bp::object callback){
             // save callback function. this is necessary because callback will get out of scope and not be
             // available anymore in the lambda below
-            bp::object* callback_pointer = new bp::object(callback);
-            input_func_pointer pointy(callback_pointer);
+            input_func_pointer pointy(new bp::object(callback));
             input_callbacks[input.topic] = pointy;
 
             auto callback_fun = [&](const std::vector <int8_t> &audio,
@@ -235,20 +234,18 @@ namespace esiaf_ros {
             Esiaf_Handler::add_input_topic(input, callback_fun);
         }
 
-        void add_vad_finished_callback_wrapper(bp::str topic,
+        void add_vad_finished_callback_wrapper(EsiafAudioTopicInfo &input,
                                       bp::object callback){
-            std::string topic_str =  bp::extract<std::string>(topic);
             // save callback function. this is necessary because callback will get out of scope and not be
             // available anymore in the lambda below
-            bp::object* callback_pointer = new bp::object(callback);
-            input_func_pointer pointy(callback_pointer);
-            input_vad_callbacks[topic_str] = pointy;
+            input_func_pointer pointy(new bp::object(callback));
+            input_vad_callbacks[input.topic] = pointy;
 
             auto callback_fun = [&]() {
                 python_gil lock;
 
                 // call python callback funtion
-                auto callback_internal = input_vad_callbacks[topic_str];
+                auto callback_internal = input_vad_callbacks[input.topic];
                 bp::str d = bp::extract<bp::str>((*callback_internal).attr("__class__").attr("__name__"));
                 std::string stringo = bp::extract<std::string>(d);
                 ROS_DEBUG("class in vad callback function: %s",stringo.c_str());
@@ -256,7 +253,7 @@ namespace esiaf_ros {
                 (*callback_internal)();
                 ROS_DEBUG("vad callback done");
             };
-            Esiaf_Handler::add_vad_finished_callback(bp::extract<std::string>(topic), callback_fun);
+            Esiaf_Handler::add_vad_finished_callback(input.topic, callback_fun);
         }
 
         void operator=(PyEsiaf_Handler const &) = delete;  // delete the copy-assignment operator

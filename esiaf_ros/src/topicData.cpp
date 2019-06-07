@@ -130,7 +130,6 @@ namespace esiaf_ros {
 
             try {
                 if(msg->segmentmentation_ended && vadCallback_set) {
-                    ROS_INFO("checking vad");
                     vadCallback();
                 }
             } catch (const std::exception &e) {
