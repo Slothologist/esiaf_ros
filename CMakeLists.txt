@@ -51,8 +51,7 @@ endif()
 
 
 ## Set compiler flags
-set (CMAKE_CXX_FLAGS "-O0")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall")
+set (CMAKE_CXX_FLAGS "-O2")
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
