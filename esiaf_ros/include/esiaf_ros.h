@@ -110,7 +110,7 @@ namespace esiaf_ros {
                      std::vector<int8_t> signal,
                      esiaf_ros::RecordingTimeStamps timeStamps);
 
-        void add_vad_finished_callback(std::string topic,
+        void add_vad_finished_callback(EsiafAudioTopicInfo &input,
                                        boost::function<void()> callback);
 
         void set_vad_finished(std::string topic);

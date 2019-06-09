@@ -253,7 +253,7 @@ namespace esiaf_ros {
                 (*callback_internal)();
                 ROS_DEBUG("vad callback done");
             };
-            Esiaf_Handler::add_vad_finished_callback(input.topic, callback_fun);
+            Esiaf_Handler::add_vad_finished_callback(input, callback_fun);
         }
 
         void operator=(PyEsiaf_Handler const &) = delete;  // delete the copy-assignment operator

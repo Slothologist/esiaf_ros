@@ -140,10 +140,10 @@ namespace esiaf_ros {
         // raise exception when topic name could not be matched
     }
 
-    void Esiaf_Handler::add_vad_finished_callback(std::string topic,
+    void Esiaf_Handler::add_vad_finished_callback(EsiafAudioTopicInfo &input,
                                                   boost::function<void()> callback) {
         for (auto&& inputTopic : handle->inputs) {// auto = InputTopicData
-            if(inputTopic.getTopicName() == topic){
+            if(inputTopic.getTopicName() == input.topic){
                 inputTopic.addVADcallback(callback);
                 return;
             }
