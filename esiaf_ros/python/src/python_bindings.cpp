@@ -218,7 +218,7 @@ namespace esiaf_ros {
                     // exception
                     if (!e){
                         PyErr_Print();
-                        ROS_INFO("no e");
+                        ROS_INFO("no additional error message");
                         return;
                     }
 
