@@ -154,6 +154,7 @@ namespace esiaf_ros {
 
         OutputTopicData::OutputTopicData(ros::NodeHandle *nodeHandle, esiaf_ros::EsiafAudioTopicInfo topic) :
                 vadFinished(false),
+                sslSet(false),
                 current_id(1){
 
             this->topic = topic;
@@ -175,14 +176,23 @@ namespace esiaf_ros {
             msg.time = timeStamps;
             msg.segmentmentation_ended = vadFinished;
             msg.id = current_id;
+            if(sslSet){
+                msg.directions = sslDirs;
+            }
             this->publisher.publish(msg);
             ROS_DEBUG("output topicdata publish complete");
             vadFinished = false;
+            sslSet = false;
             current_id++;
         }
 
         void OutputTopicData::setVADfinished() {
             vadFinished = true;
+        }
+
+        void OutputTopicData::setSSLDirs(std::vector<esiaf_ros::SSLDir> sslDirs) {
+            this->sslDirs = sslDirs;
+            sslSet = true;
         }
 
         void OutputTopicData::initialize_resampler() {

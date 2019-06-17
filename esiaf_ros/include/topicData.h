@@ -10,6 +10,7 @@
 #include "esiaf_ros/AugmentedAudio.h"
 #include "esiaf_ros/AudioFormat.h"
 #include "esiaf_ros/RecordingTimeStamps.h"
+#include "esiaf_ros/SSLDir.h"
 #include "resample.h"
 
 namespace esiaf_ros {
@@ -94,6 +95,8 @@ namespace esiaf_ros {
 
             void setVADfinished();
 
+            void setSSLDirs(std::vector<esiaf_ros::SSLDir> sslDirs);
+
         protected:
             void initialize_resampler();
 
@@ -101,6 +104,8 @@ namespace esiaf_ros {
             ros::Publisher publisher;
             bool vadFinished;
             int current_id;
+            bool sslSet;
+            std::vector<esiaf_ros::SSLDir> sslDirs;
         };
 
     }

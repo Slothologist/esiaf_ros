@@ -160,6 +160,15 @@ namespace esiaf_ros {
         }
     }
 
+    void Esiaf_Handler::set_ssl_dir(std::string topic, std::vector<esiaf_ros::SSLDir> sslDirs) {
+        for (auto&& outputTopic : handle->outputs) {// auto = OutputTopicData
+            if(outputTopic.getTopicName() == topic){
+                outputTopic.setSSLDirs(sslDirs);
+            }
+            return;
+        }
+    }
+
     void Esiaf_Handler::quit_esiaf() {
         delete handle;
     }

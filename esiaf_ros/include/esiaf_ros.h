@@ -14,6 +14,7 @@
 #include "ros/ros.h"
 #include "esiaf_ros/RecordingTimeStamps.h"
 #include "esiaf_ros/AudioTopicFormatConstants.h"
+#include "esiaf_ros/SSLDir.h"
 
 namespace esiaf_ros {
 
@@ -114,6 +115,9 @@ namespace esiaf_ros {
                                        boost::function<void()> callback);
 
         void set_vad_finished(std::string topic);
+
+        void set_ssl_dirs(std::string topic,
+                         std::vector<esiaf_ros::SSLDir> sslDirs);
 
         void quit_esiaf();
 
