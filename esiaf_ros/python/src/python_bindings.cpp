@@ -79,6 +79,7 @@ namespace esiaf_ros {
     public:
         std::map<std::string, input_func_pointer> input_callbacks;
         std::map<std::string, input_func_pointer> input_vad_callbacks;
+        std::map<std::string, input_func_pointer> input_ssl_callbacks;
 
 
         PyEsiaf_Handler(std::string nodeName,
@@ -256,6 +257,29 @@ namespace esiaf_ros {
             Esiaf_Handler::add_vad_finished_callback(input, callback_fun);
         }
 
+        void add_ssl_dir_callback_wrapper(EsiafAudioTopicInfo &input,
+                                               bp::object callback) {
+            // save callback function. this is necessary because callback will get out of scope and not be
+            // available anymore in the lambda below
+            input_func_pointer pointy(new bp::object(callback));
+            input_ssl_callbacks[input.topic] = pointy;
+
+            auto callback_fun = [&](const std::vector<esiaf_ros::SSLDir> &sslDirs) {
+                python_gil lock;
+
+                // call python callback funtion
+                auto callback_internal = input_ssl_callbacks[input.topic];
+                bp::str d = bp::extract<bp::str>((*callback_internal).attr("__class__").attr("__name__"));
+                std::string stringo = bp::extract<std::string>(d);
+                ROS_DEBUG("class in vad callback function: %s",stringo.c_str());
+
+                (*callback_internal)(sslDirs);
+                ROS_DEBUG("vad callback done");
+            };
+            Esiaf_Handler::add_ssl_dir_callback(input, callback_fun);
+        }
+
+
         void operator=(PyEsiaf_Handler const &) = delete;  // delete the copy-assignment operator
     };
 }
@@ -324,6 +348,8 @@ BOOST_PYTHON_MODULE(pyesiaf){
                 .def("publish", &esiaf_ros::PyEsiaf_Handler::publish_wrapper)
                 .def("add_input_topic", &esiaf_ros::PyEsiaf_Handler::add_input_topic_wrapper)
                 .def("add_vad_finished_callback", &esiaf_ros::PyEsiaf_Handler::add_vad_finished_callback_wrapper)
+                .def("set_ssl_dirs", &esiaf_ros::PyEsiaf_Handler::set_ssl_dirs)
+                .def("add_ssl_dir_callback", &esiaf_ros::PyEsiaf_Handler::add_ssl_dir_callback_wrapper)
         ;
 
 

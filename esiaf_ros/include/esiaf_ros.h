@@ -119,6 +119,11 @@ namespace esiaf_ros {
         void set_ssl_dirs(std::string topic,
                          std::vector<esiaf_ros::SSLDir> sslDirs);
 
+        void add_ssl_dir_callback(EsiafAudioTopicInfo &input,
+                                       boost::function<void(
+                                               const std::vector<esiaf_ros::SSLDir>&
+                                       )> callback);
+
         void quit_esiaf();
 
 

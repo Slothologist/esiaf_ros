@@ -160,13 +160,26 @@ namespace esiaf_ros {
         }
     }
 
-    void Esiaf_Handler::set_ssl_dir(std::string topic, std::vector<esiaf_ros::SSLDir> sslDirs) {
+    void Esiaf_Handler::set_ssl_dirs(std::string topic, std::vector<esiaf_ros::SSLDir> sslDirs) {
         for (auto&& outputTopic : handle->outputs) {// auto = OutputTopicData
             if(outputTopic.getTopicName() == topic){
                 outputTopic.setSSLDirs(sslDirs);
             }
             return;
         }
+    }
+
+    void Esiaf_Handler::add_ssl_dir_callback(EsiafAudioTopicInfo &input,
+                                             boost::function<void(
+                                                     const std::vector<esiaf_ros::SSLDir>&
+                                             )> callback) {
+        for (auto&& inputTopic : handle->inputs) {// auto = InputTopicData
+            if(inputTopic.getTopicName() == input.topic){
+                inputTopic.addSSLcallback(callback);
+                return;
+            }
+        }
+        // raise exception?
     }
 
     void Esiaf_Handler::quit_esiaf() {

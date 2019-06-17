@@ -65,6 +65,7 @@ namespace esiaf_ros {
                                                             const esiaf_ros::RecordingTimeStamps &)> callback_ptr) :
                 userCallback(callback_ptr),
                 vadCallback_set(false),
+                sslCallback_set(false),
                 last_id(-1) {
             this->topic = topic;
             this->clientSideFormat = topic.allowedFormat;
@@ -129,6 +130,14 @@ namespace esiaf_ros {
             }
 
             try {
+                if(sslCallback_set) {
+                    sslCallback(msg->directions);
+                }
+            } catch (const std::exception &e) {
+                ROS_INFO("%s", e.what());
+            }
+
+            try {
                 if(msg->segmentmentation_ended && vadCallback_set) {
                     vadCallback();
                 }
@@ -141,6 +150,13 @@ namespace esiaf_ros {
         void InputTopicData::addVADcallback(boost::function<void()> callback_ptr) {
             ROS_INFO("adding vad callback");
             vadCallback = callback_ptr;
+            vadCallback_set = true;
+        }
+
+        void InputTopicData::addSSLcallback(boost::function<void(
+                const std::vector<esiaf_ros::SSLDir> &)> callback_ptr){
+            ROS_INFO("adding vad callback");
+            sslCallback = callback_ptr;
             vadCallback_set = true;
         }
 

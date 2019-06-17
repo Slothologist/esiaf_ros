@@ -59,6 +59,9 @@ namespace esiaf_ros {
 
             void addVADcallback(boost::function<void()> callback_ptr);
 
+            void addSSLcallback(boost::function<void(
+                    const std::vector<esiaf_ros::SSLDir> &)> callback_ptr);
+
         protected:
             void initialize_resampler();
 
@@ -69,7 +72,11 @@ namespace esiaf_ros {
 
             boost::function<void()> vadCallback;
 
+            boost::function<void(const std::vector<esiaf_ros::SSLDir> &)> sslCallback;
+
             bool vadCallback_set;
+
+            bool sslCallback_set;
 
             void internal_subscriber_callback(const esiaf_ros::AugmentedAudio::ConstPtr &msg);
 
