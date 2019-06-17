@@ -16,8 +16,6 @@ Scope, interfaces, messages, basic principles are still subject to change.
 
 - ROS
 
-- ROS MoveIt! (basically just for some convenience functions regarding python bindings)
-
 - soxr (the SOX resample library)
 
 - a somewhat recent gcc
