@@ -110,6 +110,7 @@ namespace esiaf_ros {
         static np::ndarray convert_vec_to_ndarray(EsiafAudioTopicInfo &input, const std::vector <int8_t> &audio) {
             esiaf_ros::Bitrate info = esiaf_ros::Bitrate(input.allowedFormat.bitrate);
             np::dtype d_type = np::dtype::get_builtin<int>();
+            int channels = input.allowedFormat.channels;
             size_t datatype_size;
             switch (info) {
                 case esiaf_ros::Bitrate::BIT_INT_8_UNSIGNED: {
@@ -168,7 +169,12 @@ namespace esiaf_ros {
             }
 
             ROS_DEBUG("dt prepared");
-            bp::tuple shape = bp::make_tuple((sizeof(int8_t) * audio.size()) / datatype_size);
+            bp::tuple shape;
+            if(channels == 1){
+                shape = bp::make_tuple((sizeof(int8_t) * audio.size()) / datatype_size);
+            } else{
+                shape = bp::make_tuple(channels, (sizeof(int8_t) * audio.size()) / (datatype_size * channels));
+            }
             ROS_DEBUG("shape created");
             bp::tuple stride = bp::make_tuple(datatype_size);
             ROS_DEBUG("stride created");
