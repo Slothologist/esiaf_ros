@@ -74,4 +74,11 @@ void roscpp_shutdown();
 }
 }
 
+static void wrap_roscpp_initializer()
+{
+    void (*init_fn)(const std::string&, boost::python::list&) = &moveit::py_bindings_tools::roscpp_init;
+    boost::python::def("roscpp_init", init_fn);
+    boost::python::def("roscpp_shutdown", &moveit::py_bindings_tools::roscpp_shutdown);
+}
+
 #endif

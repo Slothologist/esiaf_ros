@@ -364,4 +364,6 @@ BOOST_PYTHON_MODULE(pyesiaf){
                 .from_python<void()>()
         ;
 
+        wrap_roscpp_initializer();
+
 };
