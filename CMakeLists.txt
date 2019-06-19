@@ -33,6 +33,11 @@ if (NOT SOXR)
     message(FATAL_ERROR "soxr library not found")
 endif()
 
+find_library(SOX NAMES sox)
+if (NOT SOX)
+    message(FATAL_ERROR "sox library not found")
+endif()
+
 ## Non-essential libraries:
 # ros audio
 find_package(audio_common_msgs QUIET)
