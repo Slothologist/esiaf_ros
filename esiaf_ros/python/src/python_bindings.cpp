@@ -170,13 +170,15 @@ namespace esiaf_ros {
 
             ROS_DEBUG("dt prepared");
             bp::tuple shape;
+            bp::tuple stride;
             if(channels == 1){
                 shape = bp::make_tuple((sizeof(int8_t) * audio.size()) / datatype_size);
+                stride = bp::make_tuple(datatype_size);
             } else{
                 shape = bp::make_tuple(channels, (sizeof(int8_t) * audio.size()) / (datatype_size * channels));
+                stride = bp::make_tuple(datatype_size, datatype_size);
             }
             ROS_DEBUG("shape created");
-            bp::tuple stride = bp::make_tuple(datatype_size);
             ROS_DEBUG("stride created");
 
             bp::object own;
