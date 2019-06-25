@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
                                                                         pt.get<char>("signed_unsigned"),
                                                                         pt.get<char>("int_float"));
     esiaf_ros::Endian endian = esiaf_ros::utils::cfg_to_esiaf_endian(pt.get<std::string>("endian"));
-    auto channels = pt.get <unsigned int> ("channels");
+    unsigned int channels = pt.get<unsigned int>("channels");
 
     _snd_pcm_format format = esiaf_ros::utils::set_up_format_from_bitrate_and_endian(bitrate, endian);
     unsigned int sample_rate_ext = esiaf_ros::utils::set_up_sample_rate_from_esiaf(sample_rate);
