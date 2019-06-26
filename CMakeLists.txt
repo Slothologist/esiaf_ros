@@ -279,7 +279,7 @@ install(TARGETS esiaf_ros
 
 install(TARGETS pyesiaf
         ARCHIVE DESTINATION ${CATKIN_PACKAGE_PYTHON_DESTINATION}
-        LIBRARY DESTINATION "lib/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}/dist-packages"
+        LIBRARY DESTINATION "lib/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}/site-packages"
         )
 
 ## Mark cpp header files for installation
