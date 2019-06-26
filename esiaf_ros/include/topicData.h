@@ -12,6 +12,7 @@
 #include "esiaf_ros/RecordingTimeStamps.h"
 #include "esiaf_ros/SSLDir.h"
 #include "resample.h"
+#include <mutex>
 
 namespace esiaf_ros {
     namespace topicdata {
@@ -55,6 +56,8 @@ namespace esiaf_ros {
                            boost::function<void(const std::vector<int8_t> &,
                                                 const esiaf_ros::RecordingTimeStamps &)> callback_ptr);
 
+            ~InputTopicData();
+
             void operator=(InputTopicData const &) = delete;  // delete the copy-assignment operator
 
             void addVADcallback(boost::function<void()> callback_ptr);
@@ -84,7 +87,10 @@ namespace esiaf_ros {
 
             std::vector<esiaf_ros::AugmentedAudio::ConstPtr> out_of_order_msgs;
 
+            std::mutex* out_of_order_mutex;
+
             void call_client_callbacks(const esiaf_ros::AugmentedAudio::ConstPtr &msg);
+
         };
 
 

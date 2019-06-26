@@ -72,6 +72,11 @@ namespace esiaf_ros {
             this->librarySideFormat = topic.allowedFormat;
             this->subscriber = nodeHandle->subscribe<esiaf_ros::AugmentedAudio>(topic.topic, 1000, boost::bind(
                     &InputTopicData::internal_subscriber_callback, this, _1));
+            this->out_of_order_mutex = new std::mutex();
+        }
+
+        InputTopicData::~InputTopicData() {
+            delete this->out_of_order_mutex;
         }
 
         void InputTopicData::internal_subscriber_callback(const esiaf_ros::AugmentedAudio::ConstPtr &msg) {
@@ -83,6 +88,7 @@ namespace esiaf_ros {
             }
 
             if(msg->id > last_id+1){// message comes from the future
+                std::lock_guard<std::mutex> lock(*out_of_order_mutex);
                 out_of_order_msgs.push_back(msg);
                 return;
             }
@@ -93,6 +99,7 @@ namespace esiaf_ros {
             // if we aquired out of order msgs, call the callback for these as well
             bool out_of_order_msgs_present = false;
             do{
+                std::lock_guard<std::mutex> lock(*out_of_order_mutex);
                 for (auto it = out_of_order_msgs.begin(); it != out_of_order_msgs.end(); ) {
                     if((*it)->id == last_id + 1){
                         out_of_order_msgs_present = true;
