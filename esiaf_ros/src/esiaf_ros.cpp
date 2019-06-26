@@ -134,8 +134,8 @@ namespace esiaf_ros {
         for (auto&& outputTopic : handle->outputs) {// auto = OutputTopicData
             if(outputTopic.getTopicName() == topic){
                 outputTopic.publish(signal, timeStamps);
+                return;
             }
-            return;
         }
         // raise exception when topic name could not be matched
     }
