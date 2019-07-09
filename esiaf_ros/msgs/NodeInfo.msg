@@ -1,5 +1,0 @@
-string name
-bool alive
-int8 designation
-AudioTopicInfo[] inputTopics
-AudioTopicInfo[] outputTopics
