@@ -145,7 +145,7 @@ namespace esiaf_ros {
             }
 
             try {
-                if(msg->segmentmentation_ended && vadCallback_set) {
+                if(msg->segmentation_ended && vadCallback_set) {
                     vadCallback();
                 }
             } catch (const std::exception &e) {
@@ -197,7 +197,7 @@ namespace esiaf_ros {
             esiaf_ros::AugmentedAudio msg;
             msg.signal = signal_correctly_sampled;
             msg.time = timeStamps;
-            msg.segmentmentation_ended = vadFinished;
+            msg.segmentation_ended = vadFinished;
             msg.id = current_id;
             if(sslSet){
                 msg.directions = sslDirs;
