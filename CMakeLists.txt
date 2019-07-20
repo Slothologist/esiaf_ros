@@ -76,7 +76,6 @@ add_message_files(
         EmotionInfo.msg
         EsiafRosMsg.msg
         GenderInfo.msg
-        NodeInfo.msg
         RecordingTimeStamps.msg
         SpeechHypothesis.msg
         SpeechInfo.msg
