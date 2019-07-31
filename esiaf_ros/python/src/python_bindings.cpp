@@ -11,6 +11,7 @@
 // esiaf includes
 #include "../../include/esiaf_ros.h"
 #include "esiaf_ros/RecordingTimeStamps.h"
+#include "esiaf_ros/SSLDir.h"
 
 // boost includes for ros bindings
 #include <boost/python.hpp>
@@ -101,6 +102,19 @@ namespace esiaf_ros {
             esiaf_ros::RecordingTimeStamps timeStamps_cpp;
             mp::deserializeMsg(timeStamps, timeStamps_cpp);
             Esiaf_Handler::publish(topic, signal_in_vec, timeStamps_cpp);
+        }
+
+        void set_ssl_dirs_wrapper(std::string topic,
+                                  boost::python::list& SSLdirs) {
+
+            std::vector<esiaf_ros::SSLDir> ssl_dirs;
+            for (int i = 0; i < len(SSLdirs); ++i) {
+                std::string dir_py = boost::python::extract<std::string>(SSLdirs[i]);
+                esiaf_ros::SSLDir dir_cpp;
+                mp::deserializeMsg(dir_py, dir_cpp);
+                ssl_dirs.push_back(dir_cpp);
+            }
+            Esiaf_Handler::set_ssl_dirs(topic, ssl_dirs);
         }
 
         void quit_wrapper() {
@@ -357,7 +371,7 @@ BOOST_PYTHON_MODULE(pyesiaf){
                 .def("publish", &esiaf_ros::PyEsiaf_Handler::publish_wrapper)
                 .def("add_input_topic", &esiaf_ros::PyEsiaf_Handler::add_input_topic_wrapper)
                 .def("add_vad_finished_callback", &esiaf_ros::PyEsiaf_Handler::add_vad_finished_callback_wrapper)
-                .def("set_ssl_dirs", &esiaf_ros::PyEsiaf_Handler::set_ssl_dirs)
+                .def("set_ssl_dirs", &esiaf_ros::PyEsiaf_Handler::set_ssl_dirs_wrapper)
                 .def("add_ssl_dir_callback", &esiaf_ros::PyEsiaf_Handler::add_ssl_dir_callback_wrapper)
         ;
 
