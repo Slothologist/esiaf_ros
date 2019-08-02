@@ -99,7 +99,7 @@ namespace esiaf_ros {
                 case 96000 :
                     return esiaf_ros::Rate::RATE_96000;
                 default:
-                    std::string ex_text = " received %d, but only 8k, 16k, 32k, 441000, 48k and 96k Hz are allowed at this point!", rate;
+                    std::string ex_text = " received %d, but only 8k, 16k, 32k, 44100, 48k and 96k Hz are allowed at this point!", rate;
                     throw std::invalid_argument(ex_text);
             }
         }
