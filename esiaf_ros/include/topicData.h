@@ -119,6 +119,7 @@ namespace esiaf_ros {
             int current_id;
             bool sslSet;
             std::vector<esiaf_ros::SSLDir> sslDirs;
+            std::mutex* id_mutex;
         };
 
     }

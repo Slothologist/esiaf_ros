@@ -88,6 +88,7 @@ namespace esiaf_ros {
             }
 
             if(msg->id > last_id+1){// message comes from the future
+                ROS_INFO("id: %d, lastid: %d", msg->id, last_id);
                 std::lock_guard<std::mutex> lock(*out_of_order_mutex);
                 out_of_order_msgs.push_back(msg);
                 return;
@@ -184,9 +185,16 @@ namespace esiaf_ros {
             this->librarySideFormat = topic.allowedFormat;
             this->clientSideFormat = topic.allowedFormat;
             this->publisher = nodeHandle->advertise<esiaf_ros::AugmentedAudio>(topic.topic, 1000);
+            this->id_mutex = new std::mutex();
         }
 
         void OutputTopicData::publish(std::vector<int8_t> signal, esiaf_ros::RecordingTimeStamps timeStamps) {
+            esiaf_ros::AugmentedAudio msg;
+            {
+                std::lock_guard<std::mutex> lock(*id_mutex);
+                msg.id = current_id;
+                current_id++;
+            }
             std::vector<int8_t> signal_correctly_sampled;
             if (determine_resampling_necessary()) {
                 ROS_DEBUG("output topicdata resampling call");
@@ -194,11 +202,9 @@ namespace esiaf_ros {
             } else {
                 signal_correctly_sampled = signal;
             }
-            esiaf_ros::AugmentedAudio msg;
             msg.signal = signal_correctly_sampled;
             msg.time = timeStamps;
             msg.segmentation_ended = vadFinished;
-            msg.id = current_id;
             if(sslSet){
                 msg.directions = sslDirs;
             }
@@ -206,7 +212,6 @@ namespace esiaf_ros {
             ROS_DEBUG("output topicdata publish complete");
             vadFinished = false;
             sslSet = false;
-            current_id++;
         }
 
         void OutputTopicData::setVADfinished() {

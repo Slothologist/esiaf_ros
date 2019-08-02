@@ -50,6 +50,9 @@ else()
     message("audio common not found, build without ros audio support.")
 endif()
 
+SET(ROS_BUILD_TYPE Release)
+SET(CMAKE_BUILD_TYPE Release)
+
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
