@@ -14,8 +14,11 @@
 #include "resample.h"
 #include <mutex>
 
+#define MAX_OUT_OF_ORDER_SIZE 20
+
 namespace esiaf_ros {
     namespace topicdata {
+
 
         /////////////////////////////////////////////////////////////////////////////////////
         // BASE CLASS

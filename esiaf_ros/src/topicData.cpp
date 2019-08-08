@@ -87,20 +87,49 @@ namespace esiaf_ros {
                 last_id = msg->id - 1;
             }
 
+            bool skip_callbacks = false;
+
             if(msg->id > last_id+1){// message comes from the future
-                ROS_INFO("id: %d, lastid: %d", msg->id, last_id);
                 std::lock_guard<std::mutex> lock(*out_of_order_mutex);
                 out_of_order_msgs.push_back(msg);
-                return;
+                ROS_DEBUG("id: %d, lastid: %d, out_of_order %d", msg->id, last_id, out_of_order_msgs.size());
+                if(out_of_order_msgs.size() > MAX_OUT_OF_ORDER_SIZE){
+                    ROS_DEBUG("Max size reached");
+                    // order size descending
+                    auto orderfunction = [](const esiaf_ros::AugmentedAudio::ConstPtr &i1, const esiaf_ros::AugmentedAudio::ConstPtr &i2){
+                        return i1->id > i2->id;
+                    };
+                    std::sort(out_of_order_msgs.begin(), out_of_order_msgs.end(), orderfunction);
+
+                    // set last id to first id where all following ids are present
+                    // purge all messages with previous ids
+                    int new_last_id = out_of_order_msgs[0]->id;
+
+                    for (auto it = out_of_order_msgs.begin()+1; it != out_of_order_msgs.end(); ) {
+                        if((*it)->id == new_last_id - 1){
+                            new_last_id = (*it)->id;
+                            ++it;
+                        } else{
+                            it = out_of_order_msgs.erase(it);
+                        }
+                    }
+                    last_id = new_last_id;
+                    skip_callbacks = true;
+
+                } else {
+                    return;
+                }
             }
 
             // call the actual client callbacks
-            call_client_callbacks(msg);
+            if(!skip_callbacks)
+                call_client_callbacks(msg);
 
             // if we aquired out of order msgs, call the callback for these as well
             bool out_of_order_msgs_present = false;
+            std::lock_guard<std::mutex> lock(*out_of_order_mutex);
             do{
-                std::lock_guard<std::mutex> lock(*out_of_order_mutex);
+                out_of_order_msgs_present = false;
                 for (auto it = out_of_order_msgs.begin(); it != out_of_order_msgs.end(); ) {
                     if((*it)->id == last_id + 1){
                         out_of_order_msgs_present = true;
