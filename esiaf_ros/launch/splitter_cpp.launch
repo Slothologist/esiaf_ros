@@ -1,0 +1,4 @@
+<launch>
+    <arg name="path_to_config" />
+    <node name="splitter_cpp" pkg="esiaf_ros" type="esiaf_splitter_cpp" output="screen" args="$(arg path_to_config)" />
+</launch>

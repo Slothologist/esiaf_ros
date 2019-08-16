@@ -202,6 +202,7 @@ add_library(pyesiaf SHARED
 add_executable(esiaf_grabber esiaf_ros/src/nodes/grabber.cpp esiaf_ros/src/nodes/utils.cpp)
 add_executable(esiaf_record esiaf_ros/src/nodes/record.cpp esiaf_ros/src/nodes/utils.cpp)
 add_executable(esiaf_play esiaf_ros/src/nodes/play.cpp esiaf_ros/src/nodes/utils.cpp)
+add_executable(esiaf_splitter_cpp esiaf_ros/src/nodes/splitter.cpp esiaf_ros/src/nodes/utils.cpp)
 
 
 ## Add cmake target dependencies of the executable
@@ -246,11 +247,16 @@ target_link_libraries(esiaf_record
         asound
         esiaf_ros
         )
+target_link_libraries(esiaf_splitter_cpp
+        ${catkin_LIBRARIES}
+        esiaf_ros
+        )
 
 ## Specify include directories for the executables, so esiaf_ros.h can be found
 target_include_directories(esiaf_grabber PUBLIC esiaf_ros/include/)
 target_include_directories(esiaf_play PUBLIC esiaf_ros/include/)
 target_include_directories(esiaf_record PUBLIC esiaf_ros/include/)
+target_include_directories(esiaf_splitter_cpp PUBLIC esiaf_ros/include/)
 
 #############
 ## Install ##
@@ -270,6 +276,7 @@ target_include_directories(esiaf_record PUBLIC esiaf_ros/include/)
 install(TARGETS esiaf_grabber
         esiaf_play
         esiaf_record
+        esiaf_splitter_cpp
         DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
         )
 
