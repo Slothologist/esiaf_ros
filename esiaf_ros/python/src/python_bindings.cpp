@@ -96,6 +96,9 @@ namespace esiaf_ros {
                              np::ndarray signal,
                              const std::string &timeStamps) {
             size_t size = signal.shape(0) * signal.get_dtype().get_itemsize();
+            if(signal.get_nd() > 1){
+                size *= signal.shape(1);
+            }
             int8_t *data = (int8_t *) signal.get_data();
             std::vector <int8_t> signal_in_vec(data, data + size);
 
