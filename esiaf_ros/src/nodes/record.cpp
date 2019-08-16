@@ -59,7 +59,7 @@ int main(int argc, char **argv) {
 
     esiaf_ros::EsiafAudioFormat allowedFormat;
     allowedFormat.rate = esiaf_ros::utils::cfg_to_esaif_rate(pt.get<int>("sample_rate"));
-    allowedFormat.channels = 1;
+    allowedFormat.channels = pt.get<int>("channels");
     allowedFormat.bitrate = esiaf_ros::utils::cfg_to_esiaf_bitrate(pt.get<int>("bitrate"), pt.get<char>("signed_unsigned"), pt.get<char>("int_float"));
     allowedFormat.endian = esiaf_ros::utils::cfg_to_esiaf_endian(pt.get<std::string>("endian"));
 
